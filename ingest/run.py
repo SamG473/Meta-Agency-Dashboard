@@ -1,19 +1,19 @@
-"""Week 1 de-risk script (see SPEC.md).
-
-Pulls yesterday's spend/impressions/clicks/conversions for the configured ad
-accounts and prints them. Proves the Meta auth + Marketing API path works
-before anything is built on top of it. Does not write to a database yet —
-Postgres landing is a later milestone.
+"""Nightly ingest: pull yesterday's insights for each configured ad account
+and land them as normalized rows in Postgres (see ingest/db.py).
 """
 import os
 import sys
+from datetime import datetime
 
 from dotenv import load_dotenv
 from facebook_business.adobjects.adaccount import AdAccount
 from facebook_business.adobjects.adsinsights import AdsInsights
 from facebook_business.api import FacebookAdsApi
 
+from ingest.db import get_engine, init_db, upsert_daily_insight
+
 INSIGHT_FIELDS = [
+    AdsInsights.Field.date_start,
     AdsInsights.Field.spend,
     AdsInsights.Field.impressions,
     AdsInsights.Field.clicks,
@@ -35,7 +35,7 @@ def total_conversions(actions: list[dict] | None) -> int:
     return sum(int(a["value"]) for a in actions)
 
 
-def pull_account(account_id: str) -> None:
+def pull_account(account_id: str, engine) -> None:
     account = AdAccount(account_id)
     insights = account.get_insights(
         fields=INSIGHT_FIELDS,
@@ -45,11 +45,25 @@ def pull_account(account_id: str) -> None:
         print(f"{account_id}: no rows for yesterday")
         return
     row = insights[0]
+    insight_date = datetime.strptime(row["date_start"], "%Y-%m-%d").date()
+    spend = float(row.get("spend", 0))
+    impressions = int(row.get("impressions", 0))
+    clicks = int(row.get("clicks", 0))
+    conversions = total_conversions(row.get("actions"))
+
+    upsert_daily_insight(
+        engine,
+        account_id=account_id,
+        insight_date=insight_date,
+        spend=spend,
+        impressions=impressions,
+        clicks=clicks,
+        conversions=conversions,
+    )
     print(
-        f"{account_id}: spend=${row.get('spend', '0')} "
-        f"impressions={row.get('impressions', '0')} "
-        f"clicks={row.get('clicks', '0')} "
-        f"conversions={total_conversions(row.get('actions'))}"
+        f"{account_id}: {insight_date} spend=${spend} "
+        f"impressions={impressions} clicks={clicks} conversions={conversions} "
+        f"(stored)"
     )
 
 
@@ -65,8 +79,11 @@ def main() -> None:
         access_token=access_token,
     )
 
+    engine = get_engine()
+    init_db(engine)
+
     for account_id in load_account_ids():
-        pull_account(account_id)
+        pull_account(account_id, engine)
 
 
 if __name__ == "__main__":
