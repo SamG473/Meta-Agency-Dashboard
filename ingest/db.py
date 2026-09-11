@@ -5,9 +5,21 @@ signup (CLAUDE.md allows this). Set DATABASE_URL to a Postgres URL to point
 at Supabase instead — no query changes needed either way.
 """
 import os
-from datetime import date
+from datetime import date, datetime, timezone
 
-from sqlalchemy import Column, Date, Float, Integer, MetaData, String, Table, create_engine
+from sqlalchemy import (
+    Column,
+    Date,
+    DateTime,
+    Float,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    create_engine,
+    inspect,
+    text,
+)
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.engine import Engine
@@ -23,6 +35,33 @@ daily_insights = Table(
     Column("impressions", Integer, nullable=False),
     Column("clicks", Integer, nullable=False),
     Column("conversions", Integer, nullable=False),
+    # Nullable because rows ingested before these fields were pulled have no
+    # value for them, and a zero would be a lie rather than a gap.
+    Column("reach", Integer, nullable=True),
+    Column("purchase_value", Float, nullable=True),
+)
+
+# Per-client goals. Each account is judged against its own target and never
+# against another account's — see SPEC.md on aggregation vs comparison.
+# `goal_metric` names which metric this client is measured on; the metric's
+# unit and direction live in the API's registry, not here.
+account_targets = Table(
+    "account_targets",
+    metadata,
+    Column("account_id", String, primary_key=True),
+    Column("client_name", String, nullable=True),
+    Column("goal_metric", String, nullable=True),
+    Column("target_value", Float, nullable=True),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+
+# Columns added after the tables first shipped. `create_all` will not alter an
+# existing table, so these run as idempotent ALTERs on every init.
+_ADDED_COLUMNS = (
+    ("daily_insights", "reach", "INTEGER"),
+    ("daily_insights", "purchase_value", "DOUBLE PRECISION"),
+    ("account_targets", "goal_metric", "VARCHAR"),
+    ("account_targets", "target_value", "DOUBLE PRECISION"),
 )
 
 
@@ -34,6 +73,32 @@ def get_engine() -> Engine:
 def init_db(engine: Engine) -> None:
     metadata.create_all(engine)
 
+    # `create_all` creates missing tables but never alters existing ones, so
+    # columns added after first ship are applied here. Checked against the live
+    # schema rather than using dialect-specific "IF NOT EXISTS" syntax.
+    inspector = inspect(engine)
+    existing = {
+        table: {col["name"] for col in inspector.get_columns(table)}
+        for table in inspector.get_table_names()
+    }
+
+    with engine.begin() as conn:
+        for table, column, sql_type in _ADDED_COLUMNS:
+            if table in existing and column not in existing[table]:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {sql_type}"))
+
+        # Carry forward goals set before the metric became configurable: they
+        # were all cost per result by definition.
+        if "account_targets" in existing and "target_cpr" in existing["account_targets"]:
+            conn.execute(
+                text(
+                    "UPDATE account_targets "
+                    "SET target_value = target_cpr, "
+                    "    goal_metric = COALESCE(goal_metric, 'cost_per_result') "
+                    "WHERE target_value IS NULL AND target_cpr IS NOT NULL"
+                )
+            )
+
 
 def upsert_daily_insight(
     engine: Engine,
@@ -43,6 +108,8 @@ def upsert_daily_insight(
     impressions: int,
     clicks: int,
     conversions: int,
+    reach: int | None = None,
+    purchase_value: float | None = None,
 ) -> None:
     values = {
         "account_id": account_id,
@@ -51,6 +118,8 @@ def upsert_daily_insight(
         "impressions": impressions,
         "clicks": clicks,
         "conversions": conversions,
+        "reach": reach,
+        "purchase_value": purchase_value,
     }
     insert = pg_insert if engine.dialect.name == "postgresql" else sqlite_insert
     stmt = insert(daily_insights).values(**values)
@@ -61,6 +130,37 @@ def upsert_daily_insight(
             "impressions": stmt.excluded.impressions,
             "clicks": stmt.excluded.clicks,
             "conversions": stmt.excluded.conversions,
+            "reach": stmt.excluded.reach,
+            "purchase_value": stmt.excluded.purchase_value,
+        },
+    )
+    with engine.begin() as conn:
+        conn.execute(stmt)
+
+
+def upsert_account_target(
+    engine: Engine,
+    account_id: str,
+    client_name: str | None,
+    goal_metric: str | None,
+    target_value: float | None,
+) -> None:
+    values = {
+        "account_id": account_id,
+        "client_name": client_name,
+        "goal_metric": goal_metric,
+        "target_value": target_value,
+        "updated_at": datetime.now(timezone.utc),
+    }
+    insert = pg_insert if engine.dialect.name == "postgresql" else sqlite_insert
+    stmt = insert(account_targets).values(**values)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["account_id"],
+        set_={
+            "client_name": stmt.excluded.client_name,
+            "goal_metric": stmt.excluded.goal_metric,
+            "target_value": stmt.excluded.target_value,
+            "updated_at": stmt.excluded.updated_at,
         },
     )
     with engine.begin() as conn:

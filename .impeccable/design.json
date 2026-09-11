@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-10T00:00:00Z",
+  "title": "Design System: The Ward Board",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Enamel Ground",
+        "canonical": "#e9eeec",
+        "tonalRamp": ["#1c2220", "#2f3835", "#46524d", "#5f6d67", "#8b9791", "#b7c1bc", "#d7dedb", "#f4f7f6"]
+      },
+      "ground-sunk": {
+        "role": "neutral",
+        "displayName": "Sunk Ground",
+        "canonical": "#dfe6e3",
+        "tonalRamp": ["#1a201e", "#2c3532", "#43504b", "#5c6a65", "#88948f", "#b4beb9", "#d2dad7", "#f1f5f3"]
+      },
+      "ground-raised": {
+        "role": "neutral",
+        "displayName": "Raised Ground",
+        "canonical": "#f2f5f3",
+        "tonalRamp": ["#1d2321", "#303936", "#47534e", "#606e68", "#8c9893", "#b8c2bd", "#d8dfdc", "#f7faf8"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Graphite Ink",
+        "canonical": "#16191a",
+        "tonalRamp": ["#0b0d0d", "#16191a", "#262b2c", "#3b4243", "#59635e", "#8b9791", "#c0c9c6", "#eef1f0"]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Soft Ink",
+        "canonical": "#59635e",
+        "tonalRamp": ["#151816", "#242926", "#363d3a", "#48514d", "#59635e", "#7f8a85", "#a9b3ae", "#d8dedb"]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline Rule",
+        "canonical": "#c6d0cb",
+        "tonalRamp": ["#191d1b", "#2a312e", "#404946", "#57625d", "#818d88", "#a8b3ae", "#c6d0cb", "#eef2f0"]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Strong Rule",
+        "canonical": "#a4b2aa",
+        "tonalRamp": ["#161a18", "#262d2a", "#3b443f", "#515c56", "#7b877f", "#a4b2aa", "#c8d2cc", "#edf1ef"]
+      },
+      "alarm": {
+        "role": "primary",
+        "displayName": "Alarm Red",
+        "canonical": "#b81f27",
+        "tonalRamp": ["#2c0708", "#4a0c10", "#6c1319", "#8f1a20", "#b81f27", "#d94a51", "#ea8b8f", "#f8d5d7"]
+      },
+      "alarm-wash": {
+        "role": "primary",
+        "displayName": "Alarm Wash",
+        "canonical": "#f0d9da",
+        "tonalRamp": ["#2b1213", "#48201f", "#68302f", "#8a4644", "#b1706e", "#d0a09f", "#f0d9da", "#fbf1f1"]
+      }
+    },
+    "typographyMeta": {
+      "monument": { "displayName": "Monument", "purpose": "The out-of-range count in the attention band. One per page, tabular, alarm red only above zero." },
+      "statement": { "displayName": "Statement", "purpose": "The sentence beside the monument, capped at 24ch on wide screens; part of the same h1." },
+      "strip-value": { "displayName": "Strip Value", "purpose": "Portfolio totals in the hairline-ruled strip." },
+      "title": { "displayName": "Title", "purpose": "Client names and notice titles." },
+      "figure": { "displayName": "Figure", "purpose": "Per-row money — target and actual — with 'tnum' 1 in addition to tabular-nums." },
+      "body": { "displayName": "Body", "purpose": "Prose, reasons, notice bodies, chart readouts. Capped 66-74ch." },
+      "heading": { "displayName": "Heading", "purpose": "Uppercase ink band names — Portfolio totals and Clients only — at 1.1875rem, weight 700, 0.06em tracking, set 0.625rem above what they name." },
+      "label": { "displayName": "Label", "purpose": "Uppercase soft-ink column headers and minor section captions, 0.14em tracking." },
+      "micro": { "displayName": "Micro", "purpose": "Uppercase soft-ink chips, controls, captions, rail legends, chart footnotes, 0.16em tracking." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "The only easing in the system, used by every transition and animation." },
+      { "name": "control-transition", "value": "0.15s cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Background, colour and border-colour change on buttons, chips and the target editor." },
+      { "name": "rack-in", "value": "rack-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards; animation-delay: calc(var(--i, 0) * 55ms)", "purpose": "Rows rack into the board once on load, staggered 55ms by row index. Opacity 0 and 6px translateY to rest." },
+      { "name": "rail-draw", "value": "rail-draw 0.65s cubic-bezier(0.16, 1, 0.3, 1) backwards; animation-delay: calc(var(--i, 0) * 55ms + 200ms)", "purpose": "Each deviation rail fill draws outward from its own origin side after its row lands." },
+      { "name": "breach-arrive", "value": "breach-arrive 1.3s cubic-bezier(0.16, 1, 0.3, 1) backwards; animation-delay: calc(var(--i, 0) * 55ms + 420ms)", "purpose": "A single non-looping alarm wash on a breached row's arrival. Content is fully legible from the first frame. There is no looping animation anywhere in this system." },
+      { "name": "reduced-motion", "value": "@media (prefers-reduced-motion: reduce) { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }", "purpose": "Honoured globally across all elements and pseudo-elements." }
+    ],
+    "breakpoints": [
+      { "name": "narrow", "value": "1040px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Window Selector",
+      "kind": "nav",
+      "refersTo": "window-btn",
+      "description": "The only persistent control on the board: a three-segment reporting-window switch, pinned right on the top row opposite the Portfolio totals heading.",
+      "html": "<div class=\"ds-windows\" role=\"group\" aria-label=\"Reporting window\"><button type=\"button\" class=\"ds-windows-btn\" aria-pressed=\"true\">30 days</button><button type=\"button\" class=\"ds-windows-btn\" aria-pressed=\"false\">90 days</button><button type=\"button\" class=\"ds-windows-btn\" aria-pressed=\"false\">All</button></div>",
+      "css": ".ds-windows { display: inline-flex; border: 1px solid var(--rule-strong, #a4b2aa); } .ds-windows-btn { appearance: none; border: 0; border-right: 1px solid var(--rule-strong, #a4b2aa); background: transparent; color: var(--ink-soft, #59635e); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; padding: 0.4rem 0.7rem; cursor: pointer; border-radius: 0; transition: background 0.15s cubic-bezier(0.16,1,0.3,1), color 0.15s cubic-bezier(0.16,1,0.3,1); } .ds-windows-btn:last-child { border-right: 0; } .ds-windows-btn:hover { background: var(--ground-sunk, #dfe6e3); color: var(--ink, #16191a); } .ds-windows-btn:focus-visible { outline: 2px solid var(--ink, #16191a); outline-offset: 2px; } .ds-windows-btn[aria-pressed='true'] { background: var(--ink, #16191a); color: var(--ground, #e9eeec); }"
+    },
+    {
+      "name": "History Button",
+      "kind": "button",
+      "refersTo": "expand-btn",
+      "description": "Per-row disclosure control that expands the account into its retained history. Inverts to ink on hover.",
+      "html": "<button type=\"button\" class=\"ds-expand\" aria-expanded=\"false\">History</button>",
+      "css": ".ds-expand { appearance: none; background: transparent; border: 1px solid var(--rule-strong, #a4b2aa); border-radius: 0; color: var(--ink-soft, #59635e); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; padding: 0.35rem 0.6rem; cursor: pointer; white-space: nowrap; transition: background 0.15s cubic-bezier(0.16,1,0.3,1), color 0.15s cubic-bezier(0.16,1,0.3,1), border-color 0.15s cubic-bezier(0.16,1,0.3,1); } .ds-expand:hover { background: var(--ink, #16191a); border-color: var(--ink, #16191a); color: var(--ground, #e9eeec); } .ds-expand:focus-visible { outline: 2px solid var(--ink, #16191a); outline-offset: 2px; } .ds-expand:active { background: var(--ink, #16191a); color: var(--ground, #e9eeec); }"
+    },
+    {
+      "name": "State Chips",
+      "kind": "chip",
+      "refersTo": "chip-in-range",
+      "description": "State carried three ways at once — word, authored 9x9 SVG glyph shape, and border treatment — so it survives greyscale. Out-of-range is outlined, never filled.",
+      "html": "<span class=\"ds-chip ds-chip--in-range\"><svg class=\"ds-chip-glyph\" width=\"9\" height=\"9\" viewBox=\"0 0 9 9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"square\" aria-hidden=\"true\"><path d=\"M0.5 4.5h8\"/></svg>In range</span> <span class=\"ds-chip ds-chip--watch\"><svg class=\"ds-chip-glyph\" width=\"9\" height=\"9\" viewBox=\"0 0 9 9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"square\" aria-hidden=\"true\"><path d=\"M0.5 6L4.5 2l4 4\"/></svg>Watch</span> <span class=\"ds-chip ds-chip--out\"><svg class=\"ds-chip-glyph\" width=\"9\" height=\"9\" viewBox=\"0 0 9 9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"square\" aria-hidden=\"true\"><path d=\"M0.5 8L4.5 4l4 4M0.5 4.5L4.5 0.5l4 4\"/></svg>Over target</span> <span class=\"ds-chip ds-chip--quiet\"><svg class=\"ds-chip-glyph\" width=\"9\" height=\"9\" viewBox=\"0 0 9 9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"square\" aria-hidden=\"true\"><path d=\"M0.5 4.5h2.5M6 4.5h2.5\"/></svg>Quiet</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 0.4rem; font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; padding: 0.25rem 0.5rem; border: 1px solid var(--rule-strong, #a4b2aa); border-radius: 0; color: var(--ink-soft, #59635e); } .ds-chip-glyph { flex: none; } .ds-chip--in-range { border-color: var(--ink, #16191a); color: var(--ink, #16191a); } .ds-chip--out { border-color: var(--alarm, #b81f27); color: var(--alarm, #b81f27); } .ds-chip--watch { border-color: var(--ink, #16191a); color: var(--ink, #16191a); background: repeating-linear-gradient(-45deg, transparent, transparent 3px, var(--rule, #c6d0cb) 3px, var(--rule, #c6d0cb) 5px); }"
+    },
+    {
+      "name": "Deviation Rail",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "The signature component. Every row's zero is that account's own target, so bars grow from each client's own centre and never rank clients against one another. Explanatory marks sit above the fill.",
+      "html": "<div class=\"ds-rail ds-rail--over\"><div class=\"ds-rail-track\"></div><div class=\"ds-rail-threshold\" style=\"left: calc(50% - 15%)\"></div><div class=\"ds-rail-threshold\" style=\"left: calc(50% + 15%)\"></div><div class=\"ds-rail-zero\"></div><div class=\"ds-rail-fill\" style=\"left: 50%; width: 22%; --origin: left\"></div><span class=\"ds-rail-readout\" style=\"left: calc(50% + 22% + 8px)\">+22%</span></div>",
+      "css": ".ds-rail { position: relative; height: 30px; min-width: 150px; font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; } .ds-rail-track { position: absolute; inset: 50% 0 auto; height: 1px; background: var(--rule, #c6d0cb); transform: translateY(-50%); } .ds-rail-zero { position: absolute; left: 50%; top: 2px; bottom: 2px; width: 1px; background: var(--ink, #16191a); z-index: 3; } .ds-rail-threshold { position: absolute; top: 8px; bottom: 8px; width: 1px; background: var(--ink-soft, #59635e); z-index: 3; } .ds-rail-fill { position: absolute; top: 50%; height: 9px; transform: translateY(-50%); background: var(--ink, #16191a); transform-origin: var(--origin, left) center; z-index: 1; } .ds-rail--over .ds-rail-fill { background: var(--alarm, #b81f27); } .ds-rail-readout { position: absolute; top: -1px; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.08em; color: var(--ink-soft, #59635e); z-index: 3; } .ds-rail--over .ds-rail-readout { color: var(--alarm, #b81f27); }"
+    },
+    {
+      "name": "Broken Rail with Knocked-Out Legend",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "The absent state of the rail: the line is drawn, then broken, and the legend is knocked out of the rule behind it the way a legend is set into a printed line. No fake bar is ever drawn.",
+      "html": "<div class=\"ds-rail-broken\"><div class=\"ds-rail-broken-track\"></div><span class=\"ds-rail-absent\"><span>Quiet 61 days</span></span></div>",
+      "css": ".ds-rail-broken { position: relative; height: 30px; min-width: 150px; font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; } .ds-rail-broken-track { position: absolute; inset: 50% 0 auto; height: 1px; transform: translateY(-50%); background: repeating-linear-gradient(to right, var(--rule-strong, #a4b2aa) 0 5px, transparent 5px 10px); } .ds-rail-absent { position: absolute; inset: 0; display: flex; align-items: center; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft, #59635e); z-index: 2; } .ds-rail-absent > span { background: var(--ground, #e9eeec); padding-right: 0.55rem; }"
+    },
+    {
+      "name": "Target Editor",
+      "kind": "input",
+      "refersTo": "target-input",
+      "description": "Inline per-row goal editor. At rest a dashed-underline button in figure type; editing exposes a square numeric field with a filled Save and an outlined Cancel.",
+      "html": "<span class=\"ds-target\"><button type=\"button\" class=\"ds-target-btn\">£18.50</button></span> <form class=\"ds-target-form\"><input class=\"ds-target-input\" type=\"number\" step=\"0.01\" min=\"0\" inputmode=\"decimal\" value=\"18.50\"><button type=\"submit\" class=\"ds-target-save\">Save</button><button type=\"button\" class=\"ds-target-cancel\">Cancel</button><span class=\"ds-target-error\">Enter an amount above zero, or clear the field to remove the target.</span></form>",
+      "css": ".ds-target-btn { appearance: none; background: transparent; border: 0; border-bottom: 1px dashed var(--rule-strong, #a4b2aa); border-radius: 0; color: var(--ink, #16191a); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 1rem; font-weight: 600; font-variant-numeric: tabular-nums; padding: 0 0 1px; cursor: pointer; transition: border-color 0.15s cubic-bezier(0.16,1,0.3,1), color 0.15s cubic-bezier(0.16,1,0.3,1); } .ds-target-btn:hover { border-bottom-color: var(--ink, #16191a); border-bottom-style: solid; } .ds-target-btn:focus-visible { outline: 2px solid var(--ink, #16191a); outline-offset: 2px; } .ds-target-form { display: inline-flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; margin-left: 1.5rem; } .ds-target-input { width: 5.5rem; font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 1rem; font-weight: 600; font-variant-numeric: tabular-nums; background: var(--ground-raised, #f2f5f3); color: var(--ink, #16191a); border: 1px solid var(--ink, #16191a); border-radius: 0; padding: 0.2rem 0.35rem; } .ds-target-input:focus-visible { outline: 2px solid var(--ink, #16191a); outline-offset: 2px; } .ds-target-save, .ds-target-cancel { appearance: none; border: 1px solid var(--rule-strong, #a4b2aa); border-radius: 0; background: transparent; color: var(--ink-soft, #59635e); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.3rem 0.45rem; cursor: pointer; } .ds-target-save { border-color: var(--ink, #16191a); background: var(--ink, #16191a); color: var(--ground, #e9eeec); } .ds-target-save:disabled { opacity: 0.45; cursor: not-allowed; } .ds-target-cancel:hover { color: var(--ink, #16191a); border-color: var(--ink, #16191a); } .ds-target-error { display: block; flex-basis: 100%; margin-top: 0.3rem; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.06em; color: var(--alarm, #b81f27); max-width: 28ch; }"
+    },
+    {
+      "name": "Portfolio Strip",
+      "kind": "card",
+      "refersTo": "",
+      "description": "Not a card: an auto-fit grid of hairline-divided cells opened by an ink rule and closed by a hairline. No shell, no radius, no shadow.",
+      "html": "<section class=\"ds-strip\" aria-label=\"Portfolio totals\"><div class=\"ds-strip-cell\"><span class=\"ds-label\">Spend</span><span class=\"ds-strip-value\">£0.00</span></div><div class=\"ds-strip-cell\"><span class=\"ds-label\">Results</span><span class=\"ds-strip-value\">0</span></div><div class=\"ds-strip-cell\"><span class=\"ds-label\">Accounts</span><span class=\"ds-strip-value\">1</span></div><div class=\"ds-strip-cell\"><span class=\"ds-label\">Last data</span><span class=\"ds-strip-value\">11 Jul 2026</span></div></section>",
+      "css": ".ds-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); border-top: 1px solid var(--ink, #16191a); border-bottom: 1px solid var(--rule, #c6d0cb); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; } .ds-strip-cell { padding: 0.75rem 1.25rem 0.85rem 0; border-right: 1px solid var(--rule, #c6d0cb); } .ds-strip-cell:last-child { border-right: 0; } .ds-label { display: block; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft, #59635e); } .ds-strip-value { display: block; font-size: 1.375rem; font-weight: 600; letter-spacing: -0.02em; margin-top: 0.15rem; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Notice",
+      "kind": "card",
+      "refersTo": "notice",
+      "description": "Empty-state and error block. Hairline border with a 2px ink top rule that turns alarm red for an error notice. Capped at 70ch.",
+      "html": "<div class=\"ds-notice ds-notice--alarm\" role=\"alert\"><h2 class=\"ds-notice-title\">The board could not reach its data</h2><p class=\"ds-notice-body\">The dashboard reads from Postgres, never from Meta, so this is the API or the database — not your ad account.</p></div>",
+      "css": ".ds-notice { border: 1px solid var(--rule-strong, #a4b2aa); border-top: 2px solid var(--ink, #16191a); border-radius: 0; padding: 1.25rem 1.5rem; max-width: 70ch; font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 0.9375rem; line-height: 1.5; color: var(--ink, #16191a); } .ds-notice--alarm { border-top-color: var(--alarm, #b81f27); } .ds-notice-title { margin: 0 0 0.4rem; font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; } .ds-notice-body { margin: 0; color: var(--ink-soft, #59635e); }"
+    },
+    {
+      "name": "Chart Readout",
+      "kind": "custom",
+      "refersTo": "chart-readout",
+      "description": "The chart tooltip: a square ink block with an uppercase micro date over a two-column definition list, values right-aligned and tabular.",
+      "html": "<div class=\"ds-readout\"><div class=\"ds-readout-date\">11 July 2026</div><dl class=\"ds-readout-list\"><dt>Portfolio spend</dt><dd>£1.42</dd><dt>Results</dt><dd>3</dd><dt>Accounts delivering</dt><dd>1</dd></dl></div>",
+      "css": ".ds-readout { background: var(--ink, #16191a); color: var(--ground-raised, #f2f5f3); border-radius: 0; padding: 0.65rem 0.8rem; min-width: 12rem; font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; } .ds-readout-date { font-size: 0.625rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--rule, #c6d0cb); margin-bottom: 0.4rem; } .ds-readout-list { display: grid; grid-template-columns: 1fr auto; gap: 0.15rem 1rem; margin: 0; font-size: 0.9375rem; } .ds-readout-list dt { color: var(--rule, #c6d0cb); } .ds-readout-list dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }"
+    },
+    {
+      "name": "Attention Band",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "The first viewport: one monumental tabular numeral beside its sentence, in a single h1 so the outline and screen reader get the whole statement. The numeral turns alarm red only above zero.",
+      "html": "<section class=\"ds-attention ds-attention--alarm\"><h1 class=\"ds-attention-headline\"><span class=\"ds-attention-count\">1</span><span class=\"ds-attention-statement\">of 1 account needs attention</span></h1><ul class=\"ds-attention-reasons\"><li class=\"ds-attention-reason\"><span class=\"ds-attention-mark\"></span><span><b>SG Digital Marketing</b> has not delivered for 61 days, and has no target set, so nothing is being measured</span></li></ul></section>",
+      "css": ".ds-attention { padding: clamp(1.5rem, 4vw, 2.5rem) 0 clamp(1.5rem, 3vw, 2.25rem); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; color: var(--ink, #16191a); } .ds-attention-headline { display: grid; grid-template-columns: auto 1fr; gap: 0 clamp(1.25rem, 3vw, 2.5rem); align-items: baseline; margin: 0; font-weight: 600; } .ds-attention-count { font-size: clamp(4.25rem, 7.5vw, 5.5rem); font-weight: 700; line-height: 0.82; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; } .ds-attention--alarm .ds-attention-count { color: var(--alarm, #b81f27); } .ds-attention-statement { font-size: clamp(1.375rem, 2.6vw, 1.75rem); font-weight: 600; line-height: 1.15; letter-spacing: -0.02em; max-width: 24ch; } .ds-attention-reasons { margin: 1.5rem 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.3rem; max-width: 70ch; } .ds-attention-reason { display: flex; gap: 0.6rem; align-items: baseline; color: var(--ink-soft, #59635e); font-size: 0.9375rem; line-height: 1.5; } .ds-attention-reason b { color: var(--ink, #16191a); font-weight: 600; } .ds-attention-mark { flex: none; width: 1.25rem; border-top: 1px solid var(--rule-strong, #a4b2aa); transform: translateY(-0.3em); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Ward Board",
+    "overview": "A clinical enamel board read at a glance from across a room. The ground is a pale cool grey-green enamel, the ink is graphite, and everything that separates one thing from another is a hairline rule — never a filled card, never a shadow, never a tint panel. The board carries exceptions, not summary: a healthy or quiet portfolio renders almost entirely in ink and reads as calm on purpose, because the only thing the ground gives up saturation for is an account that has gone past its own target.\n\nDensity is high and even. The page opens on a monumental numeral rather than on a nameplate or a title bar, drops immediately into a ruled portfolio strip, then into the board itself — one row per client, each judged against its own goal and never ranked against another client. There is no sidebar, no chrome, no orientation copy; the board is the page. Every figure is set in tabular figures so columns of money align down the rule.\n\nConfirmed rejections, held in the build: no card shells, no rounded corners anywhere, no gradient used as shading, no sidebar, no looping animation. Where the direction contract and the build diverge, the build is the record: the shipped alarm is #b81f27 (not the #C1272D first proposed), and Archivo works through weight only — the width axis named in the direction was never used.",
+    "keyCharacteristics": [
+      "One accent, spent only on a real breach against a client's own target",
+      "Hairline rules as the only separation device; zero radius, zero shadow",
+      "One type family, self-hosted Archivo Variable, tabular figures throughout",
+      "State encoded three ways at once — word, authored SVG glyph shape, border treatment",
+      "Exactly two authored motion moments, both non-looping",
+      "Print vocabulary for texture: hatches, knocked-out legends, bracketed blocks"
+    ],
+    "rules": [
+      { "name": "The One Alarm Rule", "body": "Saturation is spent on exactly one thing: an account past its own target. Quiet, stale, untargeted, watch and healthy states are all rendered in ink. Any new token that introduces a second hue breaks the world.", "section": "colors" },
+      { "name": "The Retired Grey Rule", "body": "#59635e is the only secondary ink. A lighter #7d8882 was measured at 3.13:1 on this ground, failed the 4.5:1 floor, and was retired. Do not reintroduce it or any grey lighter than it for text; the quiet vocabulary is this board's common case, not its edge.", "section": "colors" },
+      { "name": "The Greyscale Survival Rule", "body": "State is always encoded redundantly — the state word, an authored SVG glyph shape, and a border treatment. Never hue alone. Print the board in greyscale and every state must still be readable.", "section": "colors" },
+      { "name": "The One Family Rule", "body": "Archivo Variable, weight axis only (400/500/600/700). No second face, no italic, no width-axis variation — the width axis was named in the direction but never shipped, and the record follows the build.", "section": "typography" },
+      { "name": "The Tabular Figures Rule", "body": "Every numeral on the board carries font-variant-numeric: tabular-nums, set on body and reasserted on every figure class. Money that can be compared down a column must never reflow.", "section": "typography" },
+      { "name": "The Three Uppercase Registers Rule", "body": "Uppercase belongs to Heading (0.06em, ink, the two band names only), Label (0.14em) and Micro (0.16em); the last two always in soft ink, always as a column header, minor section caption, control, or caption. Uppercase is never used decoratively above a heading.", "section": "typography" },
+      { "name": "The No-Sidebar Rule", "body": "The board is the page. Navigation, chrome and nameplates are not part of this world; the only persistent control is the reporting-window selector.", "section": "layout" },
+      { "name": "The Bracketed Block Rule", "body": "Every major block is opened and closed by a rule. A section that opens on an ink rule closes on one too — the page never simply stops.", "section": "layout" },
+      { "name": "The Hairline-Only Rule", "body": "Separation is a rule, never a shadow and never a filled card. If two things must be distinguished, draw a line.", "section": "elevation" },
+      { "name": "The Marks Above The Breach Rule", "body": "In the deviation rail, rail__zero and rail__threshold sit at z-index: 3 above the fill at z-index: 1. The marks that explain why a row is red must never be covered by the red. The legend layer sits between them at z-index: 2.", "section": "elevation" },
+      { "name": "The Square Corner Rule", "body": "Border radius is 0 on every surface in this system. There is no sm/md/lg radius scale to reach for.", "section": "shapes" },
+      { "name": "The Hatch-Not-Gradient Rule", "body": "Gradients exist in this build only as repeating hard-stop hatches standing in for print texture. A soft gradient used as shading, a tint ramp, or a glow is out of world.", "section": "shapes" },
+      { "name": "The No Invented Point Rule", "body": "A missing measurement is drawn as a break, a dash, or a knocked-out legend — never interpolated, never bridged, never given a zero.", "section": "components" }
+    ],
+    "dos": [
+      "Do spend the alarm red only on an account past its own target — monument, actual figure, rail fill and readout, out-of-range chip, target reference line, error text.",
+      "Do encode every state three ways at once: the word, an authored 9×9 SVG glyph shape at 1.4 stroke, and a border treatment.",
+      "Do set every numeral in tabular figures, adding font-feature-settings: 'tnum' 1 on comparison figures.",
+      "Do separate with hairlines, and open and close each major block with a rule.",
+      "Do keep the rail's explanatory marks (z-index: 3) above its fill (z-index: 1).",
+      "Do keep motion to the two authored moments: rack-in row entrance staggered by --i at 55ms with rail-draw at a 200ms offset, and breach-arrive, a single 1.3s wash. Honour prefers-reduced-motion.",
+      "Do use cubic-bezier(0.16, 1, 0.3, 1) for every transition and animation, at 0.15s for control state changes.",
+      "Do style browser surfaces — selection, caret, scrollbar, focus ring — from the same tokens.",
+      "Do rebuild the board as row grids below 1040px rather than letting a seven-column table set the page width."
+    ],
+    "donts": [
+      "Don't introduce a second hue. Green for good, amber for warning, or a blue accent all break the One Alarm Rule.",
+      "Don't reintroduce #7d8882 or any secondary grey lighter than #59635e for text.",
+      "Don't add border radius, box-shadow, blur, or a filled card shell to any surface. The client list's unfilled hairline box is the only outlined band.",
+      "Don't use a gradient as shading; gradients here are hard-stop print hatches only.",
+      "Don't fill the out-of-range chip solid — outlined only, so the red mass stays with the monument and the rail.",
+      "Don't ship a looping animation, a spinner, a pulse that repeats, or chart entrance animation.",
+      "Don't add a sidebar, nameplate, title bar, or provenance colophon.",
+      "Don't rank accounts against one another in any new visualisation; every scale centres on the account's own target.",
+      "Don't bridge or interpolate a missing day of data.",
+      "Don't add a second type family or reach for an italic or width axis; Archivo's weight axis is the whole ramp."
+    ]
+  }
+}
