@@ -24,13 +24,6 @@ export const count = (n) => (n == null ? '—' : whole.format(n))
 export const longDate = (iso) => (iso ? day.format(new Date(`${iso}T00:00:00`)) : '—')
 export const shortDate = (iso) => (iso ? dayShort.format(new Date(`${iso}T00:00:00`)) : '')
 
-export const signedPercent = (dev) => {
-  if (dev == null) return '—'
-  const pct = Math.round(dev * 100)
-  if (pct === 0) return 'on target'
-  return `${pct > 0 ? '+' : ''}${pct}%`
-}
-
 const ratio = new Intl.NumberFormat('en-GB', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,

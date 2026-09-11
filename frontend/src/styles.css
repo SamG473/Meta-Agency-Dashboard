@@ -133,10 +133,89 @@ body {
 
 /* --- shell ---------------------------------------------------------------- */
 
+/* The band gap above the first panel keeps the page clear of the nav bar. */
 .board {
   max-width: var(--board-max);
   margin: 0 auto;
-  padding: 0 var(--gutter) 3rem;
+  padding: 2.5rem var(--gutter) 3rem;
+}
+
+/* The board's two bands, each one unfilled hairline box, square like every
+   other surface: Portfolio totals with its retained history, then Clients.
+   Whatever shares a panel reads as one unit. */
+.panel {
+  border: 1px solid var(--rule);
+  padding: 1.25rem 1.5rem;
+}
+
+.panel + .panel {
+  margin-top: 2.5rem;
+}
+
+/* --- app bar -------------------------------------------------------------- */
+
+/* The app's header. Its hairline runs the full width of the window; its
+   contents sit on the board's own column, left-aligned, so the name and tabs
+   start exactly where the panels below do. */
+.appbar {
+  border-bottom: 1px solid var(--rule);
+}
+
+.appbar__inner {
+  display: flex;
+  align-items: stretch;
+  max-width: var(--board-max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+/* The agency's name set in the system face, not a logo. Mixed case against the
+   tabs' uppercase, and parted from them by a short hairline. */
+.appbar__brand {
+  align-self: center;
+  margin-right: 1.75rem;
+  padding-right: 1.75rem;
+  border-right: 1px solid var(--rule);
+  font-size: var(--t-lead);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.appbar__nav {
+  display: flex;
+  gap: 2rem;
+}
+
+/* Muted until current. The current tab darkens and takes a 2px ink underline
+   that lands on the bar's own hairline (hence the -1px). Weight never changes
+   between states, so switching tabs moves nothing. */
+.appbar__tab {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem 0;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-size: var(--t-body);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  transition: color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+}
+
+.appbar__tab:hover {
+  color: var(--ink);
+  border-bottom-color: var(--rule-strong);
+}
+
+.appbar__tab[aria-current='page'] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
 }
 
 /* The strip's heading on the left, the reporting window pinned right against
@@ -149,7 +228,6 @@ body {
   gap: 0.5rem 1.5rem;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 1.25rem 0 0;
 }
 
 .controls .windows {
@@ -204,11 +282,12 @@ body {
   padding: clamp(1.5rem, 4vw, 2.5rem) 0;
 }
 
+/* Opens on the heading's ink rule. No closing rule: the retained history
+   carries on beneath it inside the same panel. */
 .strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
   border-top: 1px solid var(--ink);
-  border-bottom: 1px solid var(--rule);
 }
 
 .strip__cell {
@@ -243,15 +322,11 @@ body {
 
 /* --- ward table ----------------------------------------------------------- */
 
-/* The client list's own container: the table dividers' hairline drawn round
-   the whole band, square like every other surface. Unfilled, so an expanded
-   history panel (raised ground) still reads as a surface inside it. The
-   minimum height holds room for about three rows, so a single client reads as
-   the start of a list rather than the whole of it. */
+/* The client list's panel. Unfilled, so an expanded history panel (raised
+   ground) still reads as a surface inside it. The minimum height holds room for
+   about three rows, so a single client reads as the start of a list rather than
+   the whole of it. */
 .ward {
-  margin-top: 2.5rem;
-  border: 1px solid var(--rule);
-  padding: 1.25rem 1.5rem;
   min-height: 20rem;
 }
 
@@ -609,13 +684,10 @@ body {
 
 /* --- retained history ----------------------------------------------------- */
 
-/* Now the last block on the page, so it closes on a rule as well as opening on
-   one — otherwise the board trails off into empty ground. */
+/* Carries on straight under the strip inside the Portfolio totals panel, with
+   no rule between them, so the totals and their history read as one unit. */
 .retained {
-  margin-top: 3.5rem;
-  padding: 1.25rem 0 1.5rem;
-  border-top: 1px solid var(--ink);
-  border-bottom: 1px solid var(--ink);
+  padding-top: 1.25rem;
 }
 
 .retained__head {
@@ -694,6 +766,12 @@ body {
   margin-top: 0.6rem;
 }
 
+/* The Analytics placeholder's single line, under its heading. */
+.placeholder {
+  margin: 0.625rem 0 0;
+  color: var(--ink-soft);
+}
+
 /* --- utility -------------------------------------------------------------- */
 
 .visually-hidden {
@@ -764,113 +842,5 @@ code {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
-  }
-}
-
-/* --- narrow widths -------------------------------------------------------- */
-
-@media (max-width: 1040px) {
-  /* Percentage columns keep dividing the board however narrow it gets, so the
-     table no longer breaks at a hard pixel floor — it just gets worse. Seven
-     columns below roughly this width leave the client name, the 132px trace
-     and the two controls fighting for a few rem each, and no phone comes close.
-     Drop out of table layout entirely and rebuild each row as a grid.
-
-     The breakpoint is a legibility judgement rather than a measurement, so it
-     can move without recalculating anything. */
-  .ward__table,
-  .ward__table tbody {
-    display: block;
-  }
-
-  .ward__table thead {
-    display: none;
-  }
-
-  .row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.35rem 1rem;
-    padding: 1rem 0;
-  }
-
-  .row > td {
-    padding: 0;
-  }
-
-  .row__cell--client {
-    grid-column: 1;
-  }
-
-  .row__cell--state {
-    grid-column: 2;
-    grid-row: 1;
-    text-align: right;
-  }
-
-  .row__cell--target,
-  .row__cell--actual {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-  }
-
-  .row__cell--goal::before {
-    content: 'Goal';
-  }
-
-  .row__cell--target::before {
-    content: 'Target';
-  }
-
-  .row__cell--actual::before {
-    content: 'Actual';
-  }
-
-  .row__cell--goal {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-  }
-
-  .row__cell--goal::before,
-  .row__cell--target::before,
-  .row__cell--actual::before {
-    font-size: var(--t-micro);
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
-    min-width: 4.5rem;
-  }
-
-  /* Trace and control share one line, rather than stacking into an L-shaped
-     void beside a 132px trace. */
-  .row__cell--trace {
-    grid-column: 1;
-    min-width: 0;
-    align-self: center;
-  }
-
-  .row__cell--expand {
-    grid-column: 2;
-    text-align: right;
-    align-self: center;
-  }
-
-  .history {
-    display: block;
-  }
-
-  .history > td {
-    display: block;
-  }
-
-  .history__inner {
-    padding: 1rem 0.75rem 0.5rem;
-  }
-
-  .ward {
-    padding: 1rem;
   }
 }

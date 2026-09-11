@@ -35,12 +35,12 @@ export default function PortfolioHistory({ history, lastDataDate }) {
     return (
       <section className="retained">
         <div className="retained__head">
-          <h2 className="label" style={{ margin: 0 }}>
+          <h3 className="label" style={{ margin: 0 }}>
             Retained portfolio history
-          </h2>
+          </h3>
         </div>
         <div className="notice">
-          <h3 className="notice__title">Nothing retained yet</h3>
+          <h4 className="notice__title">Nothing retained yet</h4>
           <p className="notice__body">
             Once the ingest runs, every day it pulls is kept here permanently — including
             the history Meta&rsquo;s own reporting rolls off.
@@ -56,9 +56,9 @@ export default function PortfolioHistory({ history, lastDataDate }) {
   return (
     <section className="retained">
       <div className="retained__head">
-        <h2 className="label" style={{ margin: 0 }}>
+        <h3 className="label" style={{ margin: 0 }}>
           Retained portfolio history
-        </h2>
+        </h3>
         <p className="micro" style={{ margin: 0 }}>
           {history.length} day{history.length === 1 ? '' : 's'} kept ·{' '}
           {longDate(first)} to {longDate(last)}

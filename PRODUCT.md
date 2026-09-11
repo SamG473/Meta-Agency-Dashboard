@@ -16,7 +16,7 @@ Frontend: **React + Recharts**, per `SPEC.md`. The user was offered the Streamli
 
 **There is exactly one user: the agency operator** (Sam Griffiths, SG Digital Marketing), checking on several client Meta ad accounts at once. Works alone; is both the person who buys the ads and the person who reports on them. Corrected 2026-09-10 — an earlier reading of this file treated interviewers as a second audience, and the user rejected it: *"this is something for only me to use and then im just going to do a video demo."*
 
-**Nobody else ever operates the interface.** The September 2026 demo is a **recorded video**, not a live walkthrough and not a handover. So the surface owes no self-introduction: no nameplate, no product title bar, no explanatory colophon, no orientation copy written for a stranger. The operator already knows what they are looking at, and a video viewer is watching, not driving. Density and directness beat legibility-to-an-outsider wherever the two conflict.
+**Nobody else ever operates the interface.** The September 2026 demo is a **recorded video**, not a live walkthrough and not a handover. So the surface owes no self-introduction: no nameplate beyond the app bar's plain-text agency name (asked for by the user on 2026-09-11), no product title bar, no explanatory colophon, no orientation copy written for a stranger. The operator already knows what they are looking at, and a video viewer is watching, not driving. Density and directness beat legibility-to-an-outsider wherever the two conflict.
 
 **Explicitly not users: the agency's own clients.** They never log in. Third-party multi-tenant access is out of scope (`CLAUDE.md`), and no client-facing or screen-share use was confirmed.
 
@@ -52,9 +52,9 @@ The discipline that protects this claim: it is *aggregation*, not cross-industry
 - Secrets live in a gitignored `.env`; never committed.
 
 **Current shape:**
-- Store: Supabase Postgres via `DATABASE_URL`. The committed `dashboard.db` SQLite file is a **stale leftover**, not the live store, and holds a duplicate of one old row.
+- Store: Supabase Postgres via `DATABASE_URL`.
 - Schema: `daily_insights(account_id, date, spend, impressions, clicks, conversions)`, primary key `(account_id, date)`, idempotent upsert — re-running ingest over the same dates is safe.
-- API: `GET /accounts` (per-account totals, CTR, CPR, and a daily trend series) and `GET /portfolio` (month-to-date spend, conversions, account count).
+- API: `GET /api/board` (everything the dashboard renders, in one read), `GET /api/metrics` (the goal metrics on offer) and `PUT /api/targets/{account_id}` (a client's goal and target).
 - Currency: GBP.
 
 **Terminology:** *CPR* = cost per result = spend ÷ conversions. *CTR* = clicks ÷ impressions × 100. "Result" and "conversion" are used interchangeably.
@@ -73,7 +73,7 @@ The discipline that protects this claim: it is *aggregation*, not cross-industry
 
 The agency is named **SG Digital Marketing** (confirmed — it is the live Meta ad account name).
 
-No logo, wordmark, palette, typeface, or brand assets exist or were provided. No voice or personality has been established. Future work must not invent brand assets and present them as existing ones.
+No logo, wordmark, palette, typeface, or brand assets exist or were provided. No voice or personality has been established. Future work must not invent brand assets and present them as existing ones. The app bar sets the agency's name in the system typeface as plain text; that is not a logo or wordmark, and none should be drawn.
 
 ## Evidence on Hand
 
@@ -81,7 +81,7 @@ No logo, wordmark, palette, typeface, or brand assets exist or were provided. No
 - **One** ad account: `act_1787458649299492`, "SG Digital Marketing", GBP, active.
 - **8 days** of insights, 2026-07-04 to 2026-07-11 — this is the account's entire delivery history, confirmed by backfilling from January and getting only these rows.
 - Totals across that window: £34.37 spend, 26,486 impressions, 41 clicks, 87 conversions.
-- **No data for September.** `GET /portfolio` filters to the current calendar month, so it currently returns zeros.
+- **No data for September.** The default 30-day window therefore shows no delivery; only the All window reaches the eight retained July days.
 
 **Open dependency (`SPEC.md`):** a second account is needed before the demo or the cross-account thesis is invisible on screen — a single-account view cannot demonstrate aggregation. Not yet obtained.
 

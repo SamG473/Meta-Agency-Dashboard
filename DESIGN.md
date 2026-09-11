@@ -176,7 +176,7 @@ A clinical enamel board read at a glance from across a room. The ground is a pal
 
 Density is high and even. The page opens on a monumental numeral rather than on a nameplate or a title bar, drops immediately into a ruled portfolio strip, then into the board itself — one row per client, each judged against its own goal and never ranked against another client. There is no sidebar, no chrome, no orientation copy; the board is the page. Every figure is set in tabular figures so columns of money align down the rule.
 
-Confirmed rejections, held in the build: no filled or shadowed card shells (the client list's unfilled hairline box is the one outlined container around a band, added at the user's request), no rounded corners anywhere, no gradient used as shading, no sidebar, no looping animation. Where the direction contract and the build diverge, the build is the record: the shipped alarm is `#b81f27` (not the `#C1272D` first proposed), and Archivo works through **weight only** — the width axis named in the direction was never used.
+Confirmed rejections, held in the build: no filled or shadowed card shells (the two unfilled hairline panels, added at the user's request, are the only outlined containers), no rounded corners anywhere, no gradient used as shading, no sidebar, no looping animation. Where the direction contract and the build diverge, the build is the record: the shipped alarm is `#b81f27` (not the `#C1272D` first proposed), and Archivo works through **weight only** — the width axis named in the direction was never used.
 
 **Key Characteristics:**
 - One accent, spent only on a real breach against a client's own target
@@ -238,18 +238,18 @@ An enamel-and-graphite palette in a single cool grey-green family, with one satu
 
 ## Layout
 
-One centred column, `1360px` maximum, with a fluid `{spacing.gutter}` and `3rem` of bottom padding. There is no sidebar and no header chrome; the top row carries the "Portfolio totals" heading (Heading register) on the left, bottom-aligned so it sits on the strip's rule, with the window selector pinned right against it (wrapping above the heading when the two cannot share a line); a matching "Clients" heading opens the ward, then the attention band, the portfolio strip, the ward table, the retained history, and a closing caveat, in that order.
+One centred column, `1360px` maximum, with a fluid `{spacing.gutter}` and `3rem` of bottom padding. There is no sidebar. An app bar opens every page: a `{colors.rule}` hairline across the full window width, its contents on the board's column and left-aligned — the agency name, a short hairline divider, then the page tabs — with `{spacing.band}` between that hairline and the first panel so the bar never reads as part of it. On the Overview page the content is two panels, `{spacing.band}` apart. The first is **Portfolio totals**: its top row carries the heading (Heading register) on the left, bottom-aligned so it sits on the strip's rule, with the window selector pinned right against it (wrapping above the heading when the two cannot share a line); beneath come the portfolio strip and then the retained history chart, with no rule between them, so the totals and their history read as one unit. The second is **Clients**: its heading over the ward table.
 
-The portfolio strip is an auto-fit grid of `minmax(min(140px, 100%), 1fr)` cells, opened by an ink rule and closed by a hairline, each cell divided by a hairline on its right except the last. The ward is a real `<table>` with `border-collapse: collapse`, header cells underlined in ink, rows underlined in hairline, and right-aligned money columns. Layout is fixed: every column has a set width sized to its widest real content (`10rem` client name, `6.5rem` goal, `5.75rem` target and actual, the `132px` trace, `6.625rem` state), and one `1.5rem` gap — `{spacing.cell}` on each side of every cell, outer edges flush — separates every pair of columns, so headers sit exactly over their cells. Nothing stretches to fill the row: History has no width of its own and is left-aligned, starting one gap after State with the spare width trailing after its control, so the header rule and row hairlines still run the full width of the board. The columns need `942px` in all. Cells pad `0.9rem` vertically.
+The portfolio strip is an auto-fit grid of `minmax(min(140px, 100%), 1fr)` cells, opened by an ink rule with no closing rule (the retained history carries on beneath it inside the same panel), each cell divided by a hairline on its right except the last. The ward is a real `<table>` with `border-collapse: collapse`, header cells underlined in ink, rows underlined in hairline, and right-aligned money columns. Layout is fixed: every column has a set width sized to its widest real content (`10rem` client name, `6.5rem` goal, `5.75rem` target and actual, the `132px` trace, `6.625rem` state), and one `1.5rem` gap — `{spacing.cell}` on each side of every cell, outer edges flush — separates every pair of columns, so headers sit exactly over their cells. Nothing stretches to fill the row: History has no width of its own and is left-aligned, starting one gap after State with the spare width trailing after its control, so the header rule and row hairlines still run the full width of the board. The columns need `942px` in all. Cells pad `0.9rem` vertically.
 
-Vertical rhythm runs on a small set of reused steps: `{spacing.hair}` and `{spacing.tight}` inside controls, `{spacing.cell}` in table cells, `{spacing.block}` for panel padding, `{spacing.band}` to open the ward and to space notices, and `{spacing.major}` before the retained history. Band padding is fluid: `clamp(1.5rem, 4vw, 2.5rem)` above the attention band.
+Vertical rhythm runs on a small set of reused steps: `{spacing.hair}` and `{spacing.tight}` inside controls, `{spacing.cell}` in table cells, `{spacing.block}` for panel padding and between the strip and the retained history, and `{spacing.band}` between the two panels and to space notices.
 
-**Responsive:** one breakpoint at `1040px`, the narrowest width at which the ward's `942px` of fixed columns still fit inside the gutters with a desktop scrollbar present. Below it the attention headline collapses to a single column, and the board drops out of table layout entirely — `table` and `tbody` become `block`, `thead` is hidden, and each row is rebuilt as a two-column grid. Client name and state chip share the first line, target and actual gain generated `Target` / `Actual` micro labels via `::before`, the deviation rail spans both columns full width, and the trace and history control share the final line.
+**Responsive:** none, by decision (2026-09-11). The board is a desktop tool with a single layout and no breakpoint. `index.html` carries no viewport meta tag, so a phone renders the desktop page zoomed out rather than a reflowed mobile version.
 
 ### Named Rules
-**The No-Sidebar Rule.** The board is the page. Navigation, chrome and nameplates are not part of this world; the only persistent control is the reporting-window selector.
+**The No-Sidebar Rule.** No sidebar and no chrome beyond one app bar — the agency's name set as plain text, then the page tabs (Overview, Analytics) — added at the user's request on 2026-09-11. Beyond it, the only persistent control is the reporting-window selector.
 
-**The Bracketed Block Rule.** Every major block is opened and closed by a rule. A section that opens on an ink rule closes on one too — the page never simply stops.
+**The Enclosed Band Rule.** Every major band is enclosed: each of the two panels is a hairline box, so the page never simply stops, and nothing inside a panel needs a rule of its own to close it.
 
 ## Elevation & Depth
 
@@ -266,7 +266,7 @@ The only true layering is inside the deviation rail, and it is a z-index order, 
 
 Zero radius, everywhere, on every element — chips, buttons, inputs, panels, notices, the rail. There is no rounded corner in the build and adding one would read as a foreign object.
 
-Strokes are hairlines: `1px` for rules, borders, rail track, rail zero and threshold marks; `2px` reserved for the ink rule that opens a notice and for the focus ring. Rail fills are `9px` deep bars, the rail itself `30px` tall with a `150px` minimum on wide screens; vitals traces are `132×30` SVGs at `1.35` stroke weight; chart lines run `1.75`.
+Strokes are hairlines: `1px` for rules, borders, rail track, rail zero and threshold marks; `2px` reserved for the ink rule that opens a notice, the current page tab's underline, and the focus ring. Rail fills are `9px` deep bars, the rail itself `30px` tall with a `150px` minimum on wide screens; vitals traces are `132×30` SVGs at `1.35` stroke weight; chart lines run `1.75`.
 
 Glyphs are authored SVG on a `9×9` box at `1.4` stroke, `square` linecap, `currentColor`, one geometry per state: in-range a single horizontal bar, watch a chevron, out-of-range a doubled chevron, stale a broken bar, everything else a ring.
 
@@ -282,6 +282,8 @@ Texture is `repeating-linear-gradient` and SVG `<pattern>` used as **print hatch
 ### Buttons
 - **Shape:** square (`{rounded.none}`), hairline border in strong rule, uppercase micro type.
 - **Window selector:** three segments in a single strong-rule box, divided by internal borders, last divider removed. Resting segments are transparent with soft ink; the pressed segment (`aria-pressed="true"`) inverts to ink ground with enamel text.
+- **App bar:** the agency name in ink at `--t-lead`, weight 700, mixed case, `-0.01em`, parted from the tabs by a short `{colors.rule}` hairline with `1.75rem` either side. No logo — none exists, and none is to be invented.
+- **Page tabs:** unboxed and unfilled, `2rem` apart, `1.5rem` of padding above and below. Uppercase at `--t-body`, weight 700, `0.08em` tracking. Resting tabs are soft ink; hover darkens to ink with a strong-rule underline; the current page (`aria-current="page"`) is ink with a `2px` ink underline landing on the bar's hairline. Weight is identical in every state, so switching tabs moves nothing.
 - **Row history button:** transparent with a strong-rule border; on hover it inverts fully — ink background, ink border, enamel text.
 - **Hover / Focus:** all controls transition `background`, `color` and `border-color` over `0.15s` on the system easing. Focus is a `2px` ink outline at `2px` offset, never a coloured glow.
 - **Save (filled):** ink ground, enamel text, ink border. Disabled drops to `opacity: 0.45` with `not-allowed`.
@@ -294,7 +296,7 @@ Texture is `repeating-linear-gradient` and SVG `<pattern>` used as **print hatch
 - **Quiet / stale / no data:** strong-rule border, soft ink text, the state carried by its glyph.
 
 ### Cards / Containers
-There are no filled cards. The container surfaces are the client list (`.ward`: transparent, a `1px` `{colors.rule}` hairline on all four sides, square, `1.25rem 1.5rem` padding tightening to `1rem` below 1040px, and a `20rem` minimum height — room for about three rows — so one client reads as the start of a list), the expanded history panel (raised ground, hairline on left, right and bottom, `1.25rem 1.25rem 0.5rem` padding, tightening to `1rem 0.75rem 0.5rem` below 1040px) and the notice block (transparent, hairline border, `2px` ink top rule that becomes alarm on an error notice, capped at 70ch).
+There are no filled cards. The container surfaces are the two panels (`.panel`: transparent, a `1px` `{colors.rule}` hairline on all four sides, square, `1.25rem 1.5rem` padding, `{spacing.band}` apart), namely Portfolio totals with its retained history and the client list, which adds a `20rem` minimum height (room for about three rows) so one client reads as the start of a list; the expanded history panel (raised ground, hairline on left, right and bottom, `1.25rem 1.25rem 0.5rem` padding) and the notice block (transparent, hairline border, `2px` ink top rule that becomes alarm on an error notice, capped at 70ch).
 
 ### Inputs / Fields
 - **Target editor:** at rest, an inline button in figure type with a dashed strong-rule underline; hovering turns that underline solid ink. Empty targets read "Set target" in soft ink at weight 500.
@@ -303,7 +305,7 @@ There are no filled cards. The container surfaces are the client list (`.ward`: 
 - **Error:** alarm-red micro text on a full-width flex basis under the field, capped at 28ch, announced via `role="alert"`.
 
 ### Navigation
-No navigation exists in this world. The reporting window selector is the only persistent control; the URL carries the chosen window so a view is bookmarkable.
+A single top nav bar with two routed pages: **Overview** (`/`, the default) and **Analytics** (`/analytics`, a "Coming soon" placeholder that shows no figures). Unknown paths redirect to Overview. The URL carries the chosen reporting window as `?window=`, and the tabs carry it between pages, so any view is bookmarkable and a trip to Analytics does not reset it.
 
 ### Deviation Rail (signature)
 Every row's zero is that account's **own** target, so bars grow from each client's own centre and no client is ever ranked against another. A hairline track spans the cell, an ink zero mark stands at 50%, and two soft-ink threshold ticks mark the ±15% band inside a ±50% full travel. The fill is `9px` deep, ink when under target and alarm when over, anchored with `transform-origin` at its own side, with the signed percentage set just outside its end in micro type — soft ink under, alarm over. Absent conditions never draw a fake bar: the track breaks into a dashed rule and a legend ("No target set", "Quiet N days", "No data in window") is knocked out of it with a ground-coloured background, the way a legend is set into a printed line.
@@ -331,16 +333,16 @@ An ink block with enamel-raised text, square, minimum `12rem` wide: an uppercase
 - **Do** keep motion to the two authored moments: `rack-in` row entrance staggered by `--i` at `55ms` with `rail-draw` at a `200ms` offset, and `breach-arrive`, a single `1.3s` wash. Honour `prefers-reduced-motion`.
 - **Do** use `cubic-bezier(0.16, 1, 0.3, 1)` for every transition and animation, at `0.15s` for control state changes.
 - **Do** style browser surfaces — selection, caret, scrollbar, focus ring — from the same tokens.
-- **Do** rebuild the board as row grids below `1040px` rather than letting a seven-column table set the page width.
+- **Do** keep the board a single desktop layout. There is no mobile version, so no breakpoint rebuilds the table.
 
 ### Don't:
 - **Don't** introduce a second hue. Green for good, amber for warning, or a blue accent all break the One Alarm Rule.
 - **Don't** reintroduce `#7d8882` or any secondary grey lighter than `{colors.ink-soft}` for text.
-- **Don't** add border radius, box-shadow, blur, or a filled card shell to any surface. The client list's unfilled hairline box is the only outlined band.
+- **Don't** add border radius, box-shadow, blur, or a filled card shell to any surface. The two unfilled hairline panels are the only outlined bands.
 - **Don't** use a gradient as shading; gradients here are hard-stop print hatches only.
 - **Don't** fill the out-of-range chip solid — outlined only, so the red mass stays with the monument and the rail.
 - **Don't** ship a looping animation, a spinner, a pulse that repeats, or chart entrance animation.
-- **Don't** add a sidebar, nameplate, title bar, or provenance colophon.
+- **Don't** add a sidebar, a logo or invented brand mark, or a provenance colophon. The app bar's agency name, set as plain text, is the only nameplate.
 - **Don't** rank accounts against one another in any new visualisation; every scale centres on the account's own target.
 - **Don't** bridge or interpolate a missing day of data.
 - **Don't** add a second type family or reach for an italic or width axis; Archivo's weight axis is the whole ramp.

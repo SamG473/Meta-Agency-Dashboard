@@ -79,16 +79,14 @@
       { "name": "breach-arrive", "value": "breach-arrive 1.3s cubic-bezier(0.16, 1, 0.3, 1) backwards; animation-delay: calc(var(--i, 0) * 55ms + 420ms)", "purpose": "A single non-looping alarm wash on a breached row's arrival. Content is fully legible from the first frame. There is no looping animation anywhere in this system." },
       { "name": "reduced-motion", "value": "@media (prefers-reduced-motion: reduce) { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }", "purpose": "Honoured globally across all elements and pseudo-elements." }
     ],
-    "breakpoints": [
-      { "name": "narrow", "value": "1040px" }
-    ]
+    "breakpoints": []
   },
   "components": [
     {
       "name": "Window Selector",
       "kind": "nav",
       "refersTo": "window-btn",
-      "description": "The only persistent control on the board: a three-segment reporting-window switch, pinned right on the top row opposite the Portfolio totals heading.",
+      "description": "The Overview page's reporting-window switch: three segments, pinned right on the top row opposite the Portfolio totals heading.",
       "html": "<div class=\"ds-windows\" role=\"group\" aria-label=\"Reporting window\"><button type=\"button\" class=\"ds-windows-btn\" aria-pressed=\"true\">30 days</button><button type=\"button\" class=\"ds-windows-btn\" aria-pressed=\"false\">90 days</button><button type=\"button\" class=\"ds-windows-btn\" aria-pressed=\"false\">All</button></div>",
       "css": ".ds-windows { display: inline-flex; border: 1px solid var(--rule-strong, #a4b2aa); } .ds-windows-btn { appearance: none; border: 0; border-right: 1px solid var(--rule-strong, #a4b2aa); background: transparent; color: var(--ink-soft, #59635e); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; padding: 0.4rem 0.7rem; cursor: pointer; border-radius: 0; transition: background 0.15s cubic-bezier(0.16,1,0.3,1), color 0.15s cubic-bezier(0.16,1,0.3,1); } .ds-windows-btn:last-child { border-right: 0; } .ds-windows-btn:hover { background: var(--ground-sunk, #dfe6e3); color: var(--ink, #16191a); } .ds-windows-btn:focus-visible { outline: 2px solid var(--ink, #16191a); outline-offset: 2px; } .ds-windows-btn[aria-pressed='true'] { background: var(--ink, #16191a); color: var(--ground, #e9eeec); }"
     },
@@ -136,9 +134,9 @@
       "name": "Portfolio Strip",
       "kind": "card",
       "refersTo": "",
-      "description": "Not a card: an auto-fit grid of hairline-divided cells opened by an ink rule and closed by a hairline. No shell, no radius, no shadow.",
+      "description": "Not a card of its own: an auto-fit grid of hairline-divided cells opened by an ink rule, with no closing rule because the retained history continues beneath it inside the Portfolio totals panel. No radius, no shadow.",
       "html": "<section class=\"ds-strip\" aria-label=\"Portfolio totals\"><div class=\"ds-strip-cell\"><span class=\"ds-label\">Spend</span><span class=\"ds-strip-value\">£0.00</span></div><div class=\"ds-strip-cell\"><span class=\"ds-label\">Results</span><span class=\"ds-strip-value\">0</span></div><div class=\"ds-strip-cell\"><span class=\"ds-label\">Accounts</span><span class=\"ds-strip-value\">1</span></div><div class=\"ds-strip-cell\"><span class=\"ds-label\">Last data</span><span class=\"ds-strip-value\">11 Jul 2026</span></div></section>",
-      "css": ".ds-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); border-top: 1px solid var(--ink, #16191a); border-bottom: 1px solid var(--rule, #c6d0cb); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; } .ds-strip-cell { padding: 0.75rem 1.25rem 0.85rem 0; border-right: 1px solid var(--rule, #c6d0cb); } .ds-strip-cell:last-child { border-right: 0; } .ds-label { display: block; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft, #59635e); } .ds-strip-value { display: block; font-size: 1.375rem; font-weight: 600; letter-spacing: -0.02em; margin-top: 0.15rem; font-variant-numeric: tabular-nums; }"
+      "css": ".ds-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); border-top: 1px solid var(--ink, #16191a); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; } .ds-strip-cell { padding: 0.75rem 1.25rem 0.85rem 0; border-right: 1px solid var(--rule, #c6d0cb); } .ds-strip-cell:last-child { border-right: 0; } .ds-label { display: block; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft, #59635e); } .ds-strip-value { display: block; font-size: 1.375rem; font-weight: 600; letter-spacing: -0.02em; margin-top: 0.15rem; font-variant-numeric: tabular-nums; }"
     },
     {
       "name": "Notice",
@@ -183,8 +181,8 @@
       { "name": "The One Family Rule", "body": "Archivo Variable, weight axis only (400/500/600/700). No second face, no italic, no width-axis variation — the width axis was named in the direction but never shipped, and the record follows the build.", "section": "typography" },
       { "name": "The Tabular Figures Rule", "body": "Every numeral on the board carries font-variant-numeric: tabular-nums, set on body and reasserted on every figure class. Money that can be compared down a column must never reflow.", "section": "typography" },
       { "name": "The Three Uppercase Registers Rule", "body": "Uppercase belongs to Heading (0.06em, ink, the two band names only), Label (0.14em) and Micro (0.16em); the last two always in soft ink, always as a column header, minor section caption, control, or caption. Uppercase is never used decoratively above a heading.", "section": "typography" },
-      { "name": "The No-Sidebar Rule", "body": "The board is the page. Navigation, chrome and nameplates are not part of this world; the only persistent control is the reporting-window selector.", "section": "layout" },
-      { "name": "The Bracketed Block Rule", "body": "Every major block is opened and closed by a rule. A section that opens on an ink rule closes on one too — the page never simply stops.", "section": "layout" },
+      { "name": "The No-Sidebar Rule", "body": "No sidebar and no chrome beyond one app bar — the agency's name set as plain text, then the page tabs (Overview, Analytics) — added at the user's request on 2026-09-11. Beyond it, the only persistent control is the reporting-window selector.", "section": "layout" },
+      { "name": "The Enclosed Band Rule", "body": "Every major band is enclosed: each of the two panels is a hairline box, so the page never simply stops, and nothing inside a panel needs a rule of its own to close it.", "section": "layout" },
       { "name": "The Hairline-Only Rule", "body": "Separation is a rule, never a shadow and never a filled card. If two things must be distinguished, draw a line.", "section": "elevation" },
       { "name": "The Marks Above The Breach Rule", "body": "In the deviation rail, rail__zero and rail__threshold sit at z-index: 3 above the fill at z-index: 1. The marks that explain why a row is red must never be covered by the red. The legend layer sits between them at z-index: 2.", "section": "elevation" },
       { "name": "The Square Corner Rule", "body": "Border radius is 0 on every surface in this system. There is no sm/md/lg radius scale to reach for.", "section": "shapes" },
@@ -200,16 +198,16 @@
       "Do keep motion to the two authored moments: rack-in row entrance staggered by --i at 55ms with rail-draw at a 200ms offset, and breach-arrive, a single 1.3s wash. Honour prefers-reduced-motion.",
       "Do use cubic-bezier(0.16, 1, 0.3, 1) for every transition and animation, at 0.15s for control state changes.",
       "Do style browser surfaces — selection, caret, scrollbar, focus ring — from the same tokens.",
-      "Do rebuild the board as row grids below 1040px rather than letting a seven-column table set the page width."
+      "Do keep the board a single desktop layout: there is no mobile version, so no breakpoint rebuilds the table."
     ],
     "donts": [
       "Don't introduce a second hue. Green for good, amber for warning, or a blue accent all break the One Alarm Rule.",
       "Don't reintroduce #7d8882 or any secondary grey lighter than #59635e for text.",
-      "Don't add border radius, box-shadow, blur, or a filled card shell to any surface. The client list's unfilled hairline box is the only outlined band.",
+      "Don't add border radius, box-shadow, blur, or a filled card shell to any surface. The two unfilled hairline panels are the only outlined bands.",
       "Don't use a gradient as shading; gradients here are hard-stop print hatches only.",
       "Don't fill the out-of-range chip solid — outlined only, so the red mass stays with the monument and the rail.",
       "Don't ship a looping animation, a spinner, a pulse that repeats, or chart entrance animation.",
-      "Don't add a sidebar, nameplate, title bar, or provenance colophon.",
+      "Don't add a sidebar, a logo or invented brand mark, or a provenance colophon. The app bar's agency name, set as plain text, is the only nameplate.",
       "Don't rank accounts against one another in any new visualisation; every scale centres on the account's own target.",
       "Don't bridge or interpolate a missing day of data.",
       "Don't add a second type family or reach for an italic or width axis; Archivo's weight axis is the whole ramp."

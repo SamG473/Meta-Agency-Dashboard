@@ -17,7 +17,9 @@ dashboard's direction contract).
 - Store: Postgres (Supabase), via SQLAlchemy Core. `DATABASE_URL` selects it;
   without that variable the code falls back to SQLite.
 - Backend: FastAPI
-- Frontend: React 18 + Vite + Recharts, fonts self-hosted via `@fontsource`
+- Frontend: React 18 + Vite + Recharts + React Router 7 (`BrowserRouter`), fonts
+  self-hosted via `@fontsource`. Routes use real paths, so a static host must
+  rewrite unknown paths to `index.html` or a direct `/analytics` link will 404.
 - Deploy: Render or Railway (must be a live URL, not a local script) — **not yet
   deployed**
 
@@ -103,19 +105,20 @@ days. It carries a `note` saying so.
 - `GET /api/metrics` — the goal metrics on offer, so the UI cannot drift from
   what the server accepts.
 - `PUT /api/targets/{account_id}` — set a client's goal metric and target.
-- `GET /accounts`, `GET /portfolio` — earlier endpoints, still served, unused by
-  the dashboard.
 
 ## Key components
 ```
 ingest/run.py          Meta pull; yesterday by default, --days/--since for backfill
 ingest/db.py           schema, migrations, idempotent upserts
 app/main.py            API, goal-metric registry, state evaluation
-frontend/src/App.jsx           board shell, client table, state chips + glyphs
+frontend/src/main.jsx          router: nav bar, / (App) and /analytics
+frontend/src/App.jsx           Overview page: panels, client table, state chips
+frontend/src/Analytics.jsx     Analytics page — placeholder only, no figures
 frontend/src/format.js         unit-aware value formatting, state labels
 frontend/src/api.js            fetch wrappers
 frontend/src/styles.css        the design system (tokens on :root)
 frontend/src/components/
+  NavBar.jsx                   app header: agency name + Overview / Analytics tabs
   GoalCell.jsx                 pick a client's goal metric
   TargetCell.jsx               set the target, in that metric's units
   VitalsTrace.jsx              per-row sparkline of the goal metric
@@ -129,6 +132,11 @@ frontend/src/components/
 - **Per-client target tracking (built).** Originally v2; the user explicitly
   authorised it on 2026-09-10.
 - **Not built:** the needs-attention feed, alerting/notifications, deployment.
+- **Analytics page (placeholder only).** The route and nav tab were authorised
+  by the user on 2026-09-11; its content is a separate, later pass. Until then it
+  shows "Coming soon" and no figures.
+- **No mobile version.** Desktop only, by the user's decision on 2026-09-11: no
+  breakpoints, no viewport meta tag. Do not add a responsive layout.
 - Do NOT build anything beyond this (extra dashboards, LLM features, write
   actions) without checking first. One finished MVP beats three in progress.
 
@@ -141,9 +149,6 @@ frontend/src/components/
 - The nightly GitHub Actions cron was blocked by Meta pending business
   verification. Verification completed 2026-09-10 and API access is restored, but
   the workflow has not been re-triggered since. Ingest is run manually.
-- `dashboard.db` is a stale local SQLite file (gitignored via `*.db`, so it is
-  not in the repo). It is not the live store and holds one obsolete row — the
-  live data is in Supabase Postgres via `DATABASE_URL`. Safe to delete.
 
 ## Commands
 - Install (Python): `/opt/anaconda3/bin/python3 -m pip install -r requirements.txt`

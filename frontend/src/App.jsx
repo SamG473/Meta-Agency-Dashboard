@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { fetchBoard, fetchMetrics } from './api.js'
 import { STATE_LABEL, count, gbp, longDate, metricValue } from './format.js'
 import GoalCell from './components/GoalCell.jsx'
@@ -77,19 +78,19 @@ function WardRow({ account, index, expanded, onToggle, onSaved, windowLabel, met
   return (
     <>
       <tr className={`row row--enter${alarm ? ' row--alarm' : ''}`} style={{ '--i': index }}>
-        <td className="row__cell--client">
+        <td>
           <span className="row__client">{account.client_name}</span>
           {account.client_name !== account.account_id && (
             <span className="row__id">{account.account_id}</span>
           )}
         </td>
-        <td className="row__cell--goal">
+        <td>
           <GoalCell account={account} metrics={metrics} onSaved={onSaved} />
         </td>
-        <td className="right row__cell--target">
+        <td className="right">
           <TargetCell account={account} onSaved={onSaved} />
         </td>
-        <td className="right row__cell--actual">
+        <td className="right">
           <span
             className={`row__figure row__figure--actual${
               account.actual_value == null ? ' row__figure--absent' : ''
@@ -98,16 +99,16 @@ function WardRow({ account, index, expanded, onToggle, onSaved, windowLabel, met
             {metricValue(account.actual_value, account.goal_unit)}
           </span>
         </td>
-        <td className="row__cell--trace">
+        <td>
           <VitalsTrace account={account} />
         </td>
-        <td className="row__cell--state">
+        <td>
           <span className={`chip chip--${account.state}`}>
             <Glyph state={account.state} />
             {STATE_LABEL[account.state] ?? account.state}
           </span>
         </td>
-        <td className="row__cell--expand">
+        <td>
           <button
             type="button"
             className="row__expand"
@@ -132,8 +133,8 @@ function WardRow({ account, index, expanded, onToggle, onSaved, windowLabel, met
 
 /* The chosen window lives in the URL so a view can be bookmarked or returned
    to, rather than resetting to 30 days on every load. */
-function windowFromUrl() {
-  const raw = new URLSearchParams(window.location.search).get('window')
+function windowFromParams(params) {
+  const raw = params.get('window')
   // Guard the absent case explicitly: Number(null) is 0, which is a valid
   // window value ("all"), so a missing parameter would silently select it.
   if (!raw) return 30
@@ -142,19 +143,25 @@ function windowFromUrl() {
 }
 
 export default function App() {
-  const [days, setDaysState] = useState(windowFromUrl)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const days = windowFromParams(searchParams)
   const [board, setBoard] = useState(null)
   const [metrics, setMetrics] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(() => new Set())
 
-  const setDays = (next) => {
-    setDaysState(next)
-    const url = new URL(window.location.href)
-    url.searchParams.set('window', next === 0 ? 'all' : String(next))
-    window.history.replaceState(null, '', url)
-  }
+  // Through the router rather than history.replaceState, so the nav bar sees
+  // the window and carries it from page to page.
+  const setDays = (next) =>
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+        params.set('window', next === 0 ? 'all' : String(next))
+        return params
+      },
+      { replace: true },
+    )
 
   const load = useCallback(
     (signal) => {
@@ -202,94 +209,100 @@ export default function App() {
       {/* Portfolio totals and Clients are sibling bands, so both are h2s under
           one page heading rather than Clients nesting beneath the totals. */}
       <h1 className="visually-hidden">Portfolio</h1>
-      <div className="controls">
-        <h2 className="heading">Portfolio totals</h2>
-        <div className="windows" role="group" aria-label="Reporting window">
-          {WINDOWS.map((w) => (
-            <button
-              key={w.days}
-              type="button"
-              className="windows__btn"
-              aria-pressed={days === w.days}
-              onClick={() => setDays(w.days)}
-            >
-              {w.label}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {error && (
-        <div className="notice notice--alarm" role="alert">
-          <h2 className="notice__title">The board could not reach its data</h2>
-          <p className="notice__body">{error}</p>
-          <p className="notice__body">
-            The dashboard reads from Postgres, never from Meta, so this is the API or the
-            database — not your ad account. Check that <code>uvicorn app.main:app</code> is
-            running.
-          </p>
+      {/* Two panels: the totals together with their retained history, then the
+          client list beneath them. */}
+      <section className="panel">
+        <div className="controls">
+          <h2 className="heading">Portfolio totals</h2>
+          <div className="windows" role="group" aria-label="Reporting window">
+            {WINDOWS.map((w) => (
+              <button
+                key={w.days}
+                type="button"
+                className="windows__btn"
+                aria-pressed={days === w.days}
+                onClick={() => setDays(w.days)}
+              >
+                {w.label}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
 
-      {!board && loading && (
-        <section className="loading" aria-busy="true">
-          <p className="label">Reading the board…</p>
-        </section>
-      )}
+        {error && (
+          <div className="notice notice--alarm" role="alert">
+            <h3 className="notice__title">The board could not reach its data</h3>
+            <p className="notice__body">{error}</p>
+            <p className="notice__body">
+              The dashboard reads from Postgres, never from Meta, so this is the API or the
+              database — not your ad account. Check that <code>uvicorn app.main:app</code> is
+              running.
+            </p>
+          </div>
+        )}
+
+        {!board && loading && (
+          <section className="loading" aria-busy="true">
+            <p className="label">Reading the board…</p>
+          </section>
+        )}
+
+        {board && (
+          <>
+            <PortfolioStrip portfolio={board.portfolio} windowLabel={board.window.label} />
+            <PortfolioHistory
+              history={board.portfolio_history ?? []}
+              lastDataDate={board.portfolio.last_data_date}
+            />
+          </>
+        )}
+      </section>
 
       {board && (
-        <>
-          <PortfolioStrip portfolio={board.portfolio} windowLabel={board.window.label} />
-
-          <section className="ward">
-            <h2 className="heading ward__heading">Clients</h2>
-            {board.accounts.length === 0 ? (
-              <div className="notice">
-                <h3 className="notice__title">No accounts on the board yet</h3>
-                <p className="notice__body">
-                  Nothing has been ingested into Postgres. Run{' '}
-                  <code>python -m ingest.run</code> to pull yesterday, or{' '}
-                  <code>python -m ingest.run --days 90</code> to backfill.
-                </p>
-              </div>
-            ) : (
-              <table className="ward__table">
-                <thead>
-                  <tr>
-                    <th scope="col">Client</th>
-                    <th scope="col">Goal</th>
-                    <th scope="col" className="right">Target</th>
-                    <th scope="col" className="right">Actual</th>
-                    <th scope="col">Trend</th>
-                    <th scope="col">State</th>
-                    <th scope="col">
-                      <span className="visually-hidden">History</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {board.accounts.map((account, i) => (
-                    <WardRow
-                      key={account.account_id}
-                      account={account}
-                      index={i}
-                      expanded={expanded.has(account.account_id)}
-                      onToggle={() => toggle(account.account_id)}
-                      onSaved={() => load()}
-                      windowLabel={board.window.label}
-                      metrics={metrics}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </section>
-
-          <PortfolioHistory
-            history={board.portfolio_history ?? []}
-            lastDataDate={board.portfolio.last_data_date}
-          />
-        </>
+        <section className="panel ward">
+          <h2 className="heading ward__heading">Clients</h2>
+          {board.accounts.length === 0 ? (
+            <div className="notice">
+              <h3 className="notice__title">No accounts on the board yet</h3>
+              <p className="notice__body">
+                Nothing has been ingested into Postgres. Run{' '}
+                <code>python -m ingest.run</code> to pull yesterday, or{' '}
+                <code>python -m ingest.run --days 90</code> to backfill.
+              </p>
+            </div>
+          ) : (
+            <table className="ward__table">
+              <thead>
+                <tr>
+                  <th scope="col">Client</th>
+                  <th scope="col">Goal</th>
+                  <th scope="col" className="right">Target</th>
+                  <th scope="col" className="right">Actual</th>
+                  <th scope="col">Trend</th>
+                  <th scope="col">State</th>
+                  <th scope="col">
+                    <span className="visually-hidden">History</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {board.accounts.map((account, i) => (
+                  <WardRow
+                    key={account.account_id}
+                    account={account}
+                    index={i}
+                    expanded={expanded.has(account.account_id)}
+                    onToggle={() => toggle(account.account_id)}
+                    onSaved={() => load()}
+                    windowLabel={board.window.label}
+                    metrics={metrics}
+                  />
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
       )}
     </main>
   )
