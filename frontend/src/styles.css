@@ -363,7 +363,8 @@ body {
    handful of accounts that is invisible; if the board ever holds thirty rows
    of six-figure amounts, put `text-align: right` back on Target and Actual and
    accept the per-column tuning that comes with it. */
-.ward__table {
+.ward__table,
+.breakdown {
   /* Half the gap between columns. */
   --cell-gap: 0.75rem;
   width: 100%;
@@ -382,7 +383,14 @@ body {
 .ward__table th:nth-child(6) { width: 16%; }
 .ward__table th:nth-child(7) { width: 12%; }
 
-.ward__table thead th {
+/* The Analytics breakdown: a name column, then three figures. */
+.breakdown th:nth-child(1) { width: 46%; }
+.breakdown th:nth-child(2) { width: 18%; }
+.breakdown th:nth-child(3) { width: 18%; }
+.breakdown th:nth-child(4) { width: 18%; }
+
+.ward__table thead th,
+.breakdown thead th {
   text-align: left;
   padding: 0 var(--cell-gap) 0.5rem;
   border-bottom: 1px solid var(--ink);
@@ -417,11 +425,13 @@ body {
 /* The outer edges stay flush so the row lines up with the rules above and
    below it. Every column between gets the same gap on both sides. */
 .ward__table th:first-child,
+.breakdown th:first-child,
 .row > td:first-child {
   padding-left: 0;
 }
 
 .ward__table th:last-child,
+.breakdown th:last-child,
 .row > td:last-child {
   padding-right: 0;
 }
@@ -766,10 +776,70 @@ body {
   margin-top: 0.6rem;
 }
 
-/* The Analytics placeholder's single line, under its heading. */
-.placeholder {
-  margin: 0.625rem 0 0;
+/* --- analytics ------------------------------------------------------------ */
+
+/* A panel's heading with a caption pinned right against it, as the retained
+   history head does. */
+.panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.panel__caption {
+  margin: 0.75rem 0 0;
+}
+
+.panel__caption + .panel__caption {
+  margin-top: 0.35rem;
+}
+
+.panel__empty {
+  margin: 0;
+  padding: 1.5rem 0 1rem;
+  max-width: 66ch;
   color: var(--ink-soft);
+}
+
+/* The client picker and the reporting window share the right of the top row. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  margin-left: auto;
+}
+
+.picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Period-over-period change under each stat. Registered like a chip: micro,
+   uppercase, a 9x9 glyph for direction. Muted by default; green only when the
+   change is an improvement. */
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.delta--better {
+  color: var(--ok);
+}
+
+.delta__glyph {
+  flex: none;
 }
 
 /* --- utility -------------------------------------------------------------- */

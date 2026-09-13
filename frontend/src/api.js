@@ -22,6 +22,12 @@ export function fetchMetrics(signal) {
   return fetch('/api/metrics', { signal }).then(json)
 }
 
+export function fetchAnalytics(accountId, days, signal) {
+  const params = new URLSearchParams({ days: String(days) })
+  if (accountId) params.set('account_id', accountId)
+  return fetch(`/api/analytics?${params}`, { signal }).then(json)
+}
+
 export function saveTarget(accountId, { clientName, goalMetric, targetValue }) {
   return fetch(`/api/targets/${encodeURIComponent(accountId)}`, {
     method: 'PUT',

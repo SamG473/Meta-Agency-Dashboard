@@ -9,7 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
-from ingest.db import account_targets, daily_insights, get_engine, upsert_account_target
+from ingest.db import (
+    account_targets,
+    adset_daily_insights,
+    daily_insights,
+    get_engine,
+    upsert_account_target,
+)
 
 load_dotenv()
 app = FastAPI(title="Meta Agency Dashboard")
@@ -296,6 +302,192 @@ def board(days: int = 30):
 def list_metrics():
     """The goal metrics a client can be measured on."""
     return [{"key": key, **spec} for key, spec in GOAL_METRICS.items()]
+
+
+# The stats the Analytics page compares period over period.
+ANALYTICS_STATS = ("spend", "results", "cpa", "ctr")
+
+
+def _period_totals(conn, account_id: str, since: date | None, until: date) -> dict:
+    """One account's totals over [since, until]. CPA and CTR are None, not zero,
+    when there is nothing to divide by."""
+    scope = [daily_insights.c.account_id == account_id, daily_insights.c.date <= until]
+    if since is not None:
+        scope.append(daily_insights.c.date >= since)
+
+    spend, results, impressions, clicks, days_with_data = conn.execute(
+        select(
+            func.coalesce(func.sum(daily_insights.c.spend), 0.0),
+            func.coalesce(func.sum(daily_insights.c.conversions), 0),
+            func.coalesce(func.sum(daily_insights.c.impressions), 0),
+            func.coalesce(func.sum(daily_insights.c.clicks), 0),
+            func.count(),
+        ).where(*scope)
+    ).one()
+
+    return {
+        "spend": round(spend, 2),
+        "results": int(results),
+        "impressions": int(impressions),
+        "clicks": int(clicks),
+        "cpa": round(spend / results, 2) if results else None,
+        "ctr": round(clicks / impressions * 100, 2) if impressions else None,
+        "days_with_data": days_with_data,
+    }
+
+
+def _change(current: float | None, previous: float | None) -> float | None:
+    """Proportional change on the previous period. None when there is no
+    earlier figure to compare against, rather than an infinite or 0% change."""
+    if current is None or previous is None or previous == 0:
+        return None
+    return round((current - previous) / previous, 4)
+
+
+@app.get("/api/analytics")
+def analytics(account_id: str | None = None, days: int = 30):
+    """One client's analytics over a window, with the equal-length period just
+    before it for comparison. Read-only. `days=0` means all retained history,
+    which has no earlier period to compare against.
+    """
+    if days < 0:
+        raise HTTPException(status_code=422, detail="days must be 0 or greater")
+
+    today = date.today()
+    since = None if days == 0 else today - timedelta(days=days - 1)
+    window = {
+        "days": days,
+        "since": str(since) if since else None,
+        "until": str(today),
+        "label": "all retained history" if days == 0 else f"the last {days} days",
+    }
+
+    with engine.connect() as conn:
+        names = {
+            row.account_id: row.client_name
+            for row in conn.execute(
+                select(account_targets.c.account_id, account_targets.c.client_name)
+            )
+        }
+        known = sorted(
+            set(conn.execute(select(daily_insights.c.account_id).distinct()).scalars().all())
+            | set(names)
+        )
+        accounts = [{"account_id": a, "client_name": names.get(a) or a} for a in known]
+
+        if not known:
+            return {
+                "window": window,
+                "previous_window": None,
+                "accounts": [],
+                "account": None,
+            }
+        if account_id is None:
+            account_id = known[0]
+        elif account_id not in known:
+            raise HTTPException(status_code=404, detail="Unknown account")
+
+        current = _period_totals(conn, account_id, since, today)
+        previous = previous_window = None
+        if since is not None:
+            previous_until = since - timedelta(days=1)
+            previous_since = previous_until - timedelta(days=days - 1)
+            previous = _period_totals(conn, account_id, previous_since, previous_until)
+            previous_window = {"since": str(previous_since), "until": str(previous_until)}
+
+        scope = [daily_insights.c.account_id == account_id]
+        if since is not None:
+            scope.append(daily_insights.c.date >= since)
+        daily = [
+            {
+                "date": str(row.date),
+                "spend": round(row.spend, 2),
+                "results": row.conversions,
+                "impressions": row.impressions,
+                "clicks": row.clicks,
+                "cpa": round(row.spend / row.conversions, 2) if row.conversions else None,
+                "ctr": round(row.clicks / row.impressions * 100, 2) if row.impressions else None,
+            }
+            for row in conn.execute(
+                select(
+                    daily_insights.c.date,
+                    daily_insights.c.spend,
+                    daily_insights.c.conversions,
+                    daily_insights.c.impressions,
+                    daily_insights.c.clicks,
+                )
+                .where(*scope)
+                .order_by(daily_insights.c.date)
+            ).all()
+        ]
+
+        latest = conn.execute(
+            select(func.max(daily_insights.c.date)).where(
+                daily_insights.c.account_id == account_id
+            )
+        ).scalar()
+
+        synced = bool(
+            conn.execute(
+                select(func.count())
+                .select_from(adset_daily_insights)
+                .where(adset_daily_insights.c.account_id == account_id)
+            ).scalar()
+        )
+        adset_scope = [adset_daily_insights.c.account_id == account_id]
+        if since is not None:
+            adset_scope.append(adset_daily_insights.c.date >= since)
+        adset_rows = conn.execute(
+            select(adset_daily_insights)
+            .where(*adset_scope)
+            .order_by(adset_daily_insights.c.date)
+        ).all()
+
+    # Summed per ad set across the window. Rows arrive oldest first, so the
+    # names left standing are each ad set's most recent ones.
+    by_adset: dict[str, dict] = {}
+    for row in adset_rows:
+        entry = by_adset.setdefault(row.adset_id, {"adset_id": row.adset_id, "spend": 0.0, "results": 0})
+        entry["adset_name"] = row.adset_name or row.adset_id
+        entry["campaign_id"] = row.campaign_id
+        entry["campaign_name"] = row.campaign_name or row.campaign_id
+        entry["spend"] += row.spend
+        entry["results"] += row.conversions
+
+    breakdown = sorted(
+        (
+            {
+                **entry,
+                "spend": round(entry["spend"], 2),
+                "cpa": round(entry["spend"] / entry["results"], 2) if entry["results"] else None,
+            }
+            for entry in by_adset.values()
+            if entry["spend"] > 0
+        ),
+        key=lambda entry: entry["spend"],
+        reverse=True,
+    )
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "window": window,
+        "previous_window": previous_window,
+        "accounts": accounts,
+        "account": {
+            "account_id": account_id,
+            "client_name": names.get(account_id) or account_id,
+            "last_data_date": str(latest) if latest else None,
+        },
+        "current": current,
+        "previous": previous,
+        "change": (
+            {key: _change(current[key], previous[key]) for key in ANALYTICS_STATS}
+            if previous
+            else None
+        ),
+        "daily": daily,
+        "breakdown": {"level": "adset", "synced": synced, "rows": breakdown},
+    }
 
 
 @app.put("/api/targets/{account_id}")

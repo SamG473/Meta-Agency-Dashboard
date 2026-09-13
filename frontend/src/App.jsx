@@ -1,18 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { fetchBoard, fetchMetrics } from './api.js'
 import { STATE_LABEL, count, gbp, longDate, metricValue } from './format.js'
+import { useReportingWindow } from './reportingWindow.js'
 import GoalCell from './components/GoalCell.jsx'
 import HistoryPanel from './components/HistoryPanel.jsx'
 import PortfolioHistory from './components/PortfolioHistory.jsx'
 import TargetCell from './components/TargetCell.jsx'
 import VitalsTrace from './components/VitalsTrace.jsx'
-
-const WINDOWS = [
-  { days: 30, label: '30 days' },
-  { days: 90, label: '90 days' },
-  { days: 0, label: 'All' },
-]
+import WindowSelector from './components/WindowSelector.jsx'
 
 /* One stroke weight, one geometry. State is carried by the mark's shape as
    well as by its word, so it survives being read in greyscale. */
@@ -131,37 +126,13 @@ function WardRow({ account, index, expanded, onToggle, onSaved, windowLabel, met
   )
 }
 
-/* The chosen window lives in the URL so a view can be bookmarked or returned
-   to, rather than resetting to 30 days on every load. */
-function windowFromParams(params) {
-  const raw = params.get('window')
-  // Guard the absent case explicitly: Number(null) is 0, which is a valid
-  // window value ("all"), so a missing parameter would silently select it.
-  if (!raw) return 30
-  const parsed = raw === 'all' ? 0 : Number(raw)
-  return WINDOWS.some((w) => w.days === parsed) ? parsed : 30
-}
-
 export default function App() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const days = windowFromParams(searchParams)
+  const [days, setDays] = useReportingWindow()
   const [board, setBoard] = useState(null)
   const [metrics, setMetrics] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(() => new Set())
-
-  // Through the router rather than history.replaceState, so the nav bar sees
-  // the window and carries it from page to page.
-  const setDays = (next) =>
-    setSearchParams(
-      (prev) => {
-        const params = new URLSearchParams(prev)
-        params.set('window', next === 0 ? 'all' : String(next))
-        return params
-      },
-      { replace: true },
-    )
 
   const load = useCallback(
     (signal) => {
@@ -215,19 +186,7 @@ export default function App() {
       <section className="panel">
         <div className="controls">
           <h2 className="heading">Portfolio totals</h2>
-          <div className="windows" role="group" aria-label="Reporting window">
-            {WINDOWS.map((w) => (
-              <button
-                key={w.days}
-                type="button"
-                className="windows__btn"
-                aria-pressed={days === w.days}
-                onClick={() => setDays(w.days)}
-              >
-                {w.label}
-              </button>
-            ))}
-          </div>
+          <WindowSelector days={days} onChange={setDays} />
         </div>
 
         {error && (

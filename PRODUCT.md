@@ -53,8 +53,8 @@ The discipline that protects this claim: it is *aggregation*, not cross-industry
 
 **Current shape:**
 - Store: Supabase Postgres via `DATABASE_URL`.
-- Schema: `daily_insights(account_id, date, spend, impressions, clicks, conversions)`, primary key `(account_id, date)`, idempotent upsert — re-running ingest over the same dates is safe.
-- API: `GET /api/board` (everything the dashboard renders, in one read), `GET /api/metrics` (the goal metrics on offer) and `PUT /api/targets/{account_id}` (a client's goal and target).
+- Schema: `daily_insights(account_id, date, spend, impressions, clicks, conversions)`, primary key `(account_id, date)`, idempotent upsert — re-running ingest over the same dates is safe. The same run also stores ad-set detail in `adset_daily_insights(account_id, adset_id, date, adset_name, campaign_id, campaign_name, spend, impressions, clicks, conversions)`.
+- API: `GET /api/board` (everything the dashboard renders, in one read), `GET /api/metrics` (the goal metrics on offer), `GET /api/analytics` (one client's period comparison, CPA/CTR trends and ad set breakdown) and `PUT /api/targets/{account_id}` (a client's goal and target).
 - Currency: GBP.
 
 **Terminology:** *CPR* = cost per result = spend ÷ conversions. *CTR* = clicks ÷ impressions × 100. "Result" and "conversion" are used interchangeably.

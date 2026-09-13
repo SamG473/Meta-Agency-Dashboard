@@ -176,7 +176,7 @@ A clinical enamel board read at a glance from across a room. The ground is a pal
 
 Density is high and even. The page opens on a monumental numeral rather than on a nameplate or a title bar, drops immediately into a ruled portfolio strip, then into the board itself — one row per client, each judged against its own goal and never ranked against another client. There is no sidebar, no chrome, no orientation copy; the board is the page. Every figure is set in tabular figures so columns of money align down the rule.
 
-Confirmed rejections, held in the build: no filled or shadowed card shells (the two unfilled hairline panels, added at the user's request, are the only outlined containers), no rounded corners anywhere, no gradient used as shading, no sidebar, no looping animation. Where the direction contract and the build diverge, the build is the record: the shipped alarm is `#b81f27` (not the `#C1272D` first proposed), and Archivo works through **weight only** — the width axis named in the direction was never used.
+Confirmed rejections, held in the build: no filled or shadowed card shells (unfilled hairline panels, added at the user's request, are the only outlined containers), no rounded corners anywhere, no gradient used as shading, no sidebar, no looping animation. Where the direction contract and the build diverge, the build is the record: the shipped alarm is `#b81f27` (not the `#C1272D` first proposed), and Archivo works through **weight only** — the width axis named in the direction was never used.
 
 **Key Characteristics:**
 - One accent, spent only on a real breach against a client's own target
@@ -222,7 +222,7 @@ An enamel-and-graphite palette in a single cool grey-green family, with one satu
 - **Monument** (`{typography.monument}`): The out-of-range count in the attention band. One per page, tabular, turning alarm red only above zero.
 - **Statement** (`{typography.statement}`): The sentence beside the monument, capped at 24ch on wide screens so it stays a headline and not a paragraph. It shares the monument's `<h1>` so the whole sentence reads as one heading.
 - **Strip Value** (`{typography.strip-value}`): Portfolio totals in the ruled strip.
-- **Heading** (`{typography.heading}`): Uppercase, ink, `--t-lead`. The board's two band names only — "Portfolio totals" and "Clients" — each an `<h2>` set `0.625rem` above the thing it names (the strip's ink rule, the table's column headers).
+- **Heading** (`{typography.heading}`): Uppercase, ink, `--t-lead`. Panel names only — "Portfolio totals" and "Clients" on Overview; "Period-over-period comparison", "CPA trend", "CTR trend" and "Campaign / ad set breakdown" on Analytics — each an `<h2>` set close above the thing it names (a strip's ink rule, a table's column headers, a chart).
 - **Title** (`{typography.title}`): Client names and notice titles.
 - **Figure** (`{typography.figure}`): Per-row money — target and actual — with `font-feature-settings: 'tnum' 1` in addition to `tabular-nums`. The absent variant drops to weight 500 in soft ink and prints an em dash.
 - **Body** (`{typography.body}`): Prose, reasons, notice bodies, chart readouts. Long prose is capped between 66ch and 74ch.
@@ -234,11 +234,11 @@ An enamel-and-graphite palette in a single cool grey-green family, with one satu
 
 **The Tabular Figures Rule.** Every numeral on the board carries `font-variant-numeric: tabular-nums`, set on `body` and reasserted on every figure class. Money that can be compared down a column must never reflow.
 
-**The Three Uppercase Registers Rule.** Uppercase belongs to Heading (0.06em, ink, the two band names only), Label (0.14em) and Micro (0.16em); the last two always in soft ink, always as a column header, minor section caption, control, or caption. Uppercase is never used decoratively above a heading.
+**The Three Uppercase Registers Rule.** Uppercase belongs to Heading (0.06em, ink, panel names only), Label (0.14em) and Micro (0.16em); the last two always in soft ink, always as a column header, minor section caption, control, or caption. Uppercase is never used decoratively above a heading.
 
 ## Layout
 
-One centred column, `1360px` maximum, with a fluid `{spacing.gutter}` and `3rem` of bottom padding. There is no sidebar. An app bar opens every page: a `{colors.rule}` hairline across the full window width, its contents on the board's column and left-aligned — the agency name, a short hairline divider, then the page tabs — with `{spacing.band}` between that hairline and the first panel so the bar never reads as part of it. On the Overview page the content is two panels, `{spacing.band}` apart. The first is **Portfolio totals**: its top row carries the heading (Heading register) on the left, bottom-aligned so it sits on the strip's rule, with the window selector pinned right against it (wrapping above the heading when the two cannot share a line); beneath come the portfolio strip and then the retained history chart, with no rule between them, so the totals and their history read as one unit. The second is **Clients**: its heading over the ward table.
+One centred column, `1360px` maximum, with a fluid `{spacing.gutter}` and `3rem` of bottom padding. There is no sidebar. An app bar opens every page: a `{colors.rule}` hairline across the full window width, its contents on the board's column and left-aligned — the agency name, a short hairline divider, then the page tabs — with `{spacing.band}` between that hairline and the first panel so the bar never reads as part of it. On the Overview page the content is two panels, `{spacing.band}` apart. The first is **Portfolio totals**: its top row carries the heading (Heading register) on the left, bottom-aligned so it sits on the strip's rule, with the window selector pinned right against it (wrapping above the heading when the two cannot share a line); beneath come the portfolio strip and then the retained history chart, with no rule between them, so the totals and their history read as one unit. The second is **Clients**: its heading over the ward table. The Analytics page is read-only and four panels, `{spacing.band}` apart: **Period-over-period comparison** (heading, with a client picker and the reporting window on the right, then a strip of Spend, Results, CPA and CTR, each with its change on the equal-length period before), **CPA trend**, **CTR trend**, and **Campaign / ad set breakdown**, whose table reuses the ward table's header and row styling.
 
 The portfolio strip is an auto-fit grid of `minmax(min(140px, 100%), 1fr)` cells, opened by an ink rule with no closing rule (the retained history carries on beneath it inside the same panel), each cell divided by a hairline on its right except the last. The ward is a real `<table>` with `border-collapse: collapse`, header cells underlined in ink, rows underlined in hairline, and right-aligned money columns. Layout is fixed: every column has a set width sized to its widest real content (`10rem` client name, `6.5rem` goal, `5.75rem` target and actual, the `132px` trace, `6.625rem` state), and one `1.5rem` gap — `{spacing.cell}` on each side of every cell, outer edges flush — separates every pair of columns, so headers sit exactly over their cells. Nothing stretches to fill the row: History has no width of its own and is left-aligned, starting one gap after State with the spare width trailing after its control, so the header rule and row hairlines still run the full width of the board. The columns need `942px` in all. Cells pad `0.9rem` vertically.
 
@@ -249,7 +249,7 @@ Vertical rhythm runs on a small set of reused steps: `{spacing.hair}` and `{spac
 ### Named Rules
 **The No-Sidebar Rule.** No sidebar and no chrome beyond one app bar — the agency's name set as plain text, then the page tabs (Overview, Analytics) — added at the user's request on 2026-09-11. Beyond it, the only persistent control is the reporting-window selector.
 
-**The Enclosed Band Rule.** Every major band is enclosed: each of the two panels is a hairline box, so the page never simply stops, and nothing inside a panel needs a rule of its own to close it.
+**The Enclosed Band Rule.** Every major band is enclosed: every panel is a hairline box, so the page never simply stops, and nothing inside a panel needs a rule of its own to close it.
 
 ## Elevation & Depth
 
@@ -294,9 +294,10 @@ Texture is `repeating-linear-gradient` and SVG `<pattern>` used as **print hatch
 - **Watch:** ink border and text over a 45° hairline hatch.
 - **Out of range:** alarm border and alarm text, **outlined and never filled** — a solid block here would become the second-largest red mass on the page and compete with the monument and the rail.
 - **Quiet / stale / no data:** strong-rule border, soft ink text, the state carried by its glyph.
+- **Change indicator (Analytics):** chip type without the box — micro, weight 700, uppercase — with a `9×9` arrow glyph for direction and a signed whole percentage on the previous period. Soft ink by default; `--ok` green only when the change is an improvement (results or CTR up, CPA down). A decline stays soft ink, never alarm red, and spend is never coloured because it has no better direction. With no earlier figure it reads "No prior data".
 
 ### Cards / Containers
-There are no filled cards. The container surfaces are the two panels (`.panel`: transparent, a `1px` `{colors.rule}` hairline on all four sides, square, `1.25rem 1.5rem` padding, `{spacing.band}` apart), namely Portfolio totals with its retained history and the client list, which adds a `20rem` minimum height (room for about three rows) so one client reads as the start of a list; the expanded history panel (raised ground, hairline on left, right and bottom, `1.25rem 1.25rem 0.5rem` padding) and the notice block (transparent, hairline border, `2px` ink top rule that becomes alarm on an error notice, capped at 70ch).
+There are no filled cards. The container surfaces are panels (`.panel`: transparent, a `1px` `{colors.rule}` hairline on all four sides, square, `1.25rem 1.5rem` padding, `{spacing.band}` apart): on Overview, Portfolio totals with its retained history and the client list, which adds a `20rem` minimum height (room for about three rows) so one client reads as the start of a list; on Analytics, one panel per section; the expanded history panel (raised ground, hairline on left, right and bottom, `1.25rem 1.25rem 0.5rem` padding) and the notice block (transparent, hairline border, `2px` ink top rule that becomes alarm on an error notice, capped at 70ch).
 
 ### Inputs / Fields
 - **Target editor:** at rest, an inline button in figure type with a dashed strong-rule underline; hovering turns that underline solid ink. Empty targets read "Set target" in soft ink at weight 500.
@@ -305,7 +306,7 @@ There are no filled cards. The container surfaces are the two panels (`.panel`: 
 - **Error:** alarm-red micro text on a full-width flex basis under the field, capped at 28ch, announced via `role="alert"`.
 
 ### Navigation
-A single top nav bar with two routed pages: **Overview** (`/`, the default) and **Analytics** (`/analytics`, a "Coming soon" placeholder that shows no figures). Unknown paths redirect to Overview. The URL carries the chosen reporting window as `?window=`, and the tabs carry it between pages, so any view is bookmarkable and a trip to Analytics does not reset it.
+A single top nav bar with two routed pages: **Overview** (`/`, the default) and **Analytics** (`/analytics`, a read-only view of one client, chosen by `?account=`). Unknown paths redirect to Overview. The URL carries the chosen reporting window as `?window=`, and the tabs carry it between pages, so any view is bookmarkable and a trip to Analytics does not reset it.
 
 ### Deviation Rail (signature)
 Every row's zero is that account's **own** target, so bars grow from each client's own centre and no client is ever ranked against another. A hairline track spans the cell, an ink zero mark stands at 50%, and two soft-ink threshold ticks mark the ±15% band inside a ±50% full travel. The fill is `9px` deep, ink when under target and alarm when over, anchored with `transform-origin` at its own side, with the signed percentage set just outside its end in micro type — soft ink under, alarm over. Absent conditions never draw a fake bar: the track breaks into a dashed rule and a legend ("No target set", "Quiet N days", "No data in window") is knocked out of it with a ground-coloured background, the way a legend is set into a printed line.
@@ -338,7 +339,7 @@ An ink block with enamel-raised text, square, minimum `12rem` wide: an uppercase
 ### Don't:
 - **Don't** introduce a second hue. Green for good, amber for warning, or a blue accent all break the One Alarm Rule.
 - **Don't** reintroduce `#7d8882` or any secondary grey lighter than `{colors.ink-soft}` for text.
-- **Don't** add border radius, box-shadow, blur, or a filled card shell to any surface. The two unfilled hairline panels are the only outlined bands.
+- **Don't** add border radius, box-shadow, blur, or a filled card shell to any surface. Unfilled hairline panels are the only outlined bands.
 - **Don't** use a gradient as shading; gradients here are hard-stop print hatches only.
 - **Don't** fill the out-of-range chip solid — outlined only, so the red mass stays with the monument and the rail.
 - **Don't** ship a looping animation, a spinner, a pulse that repeats, or chart entrance animation.

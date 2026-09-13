@@ -29,6 +29,17 @@ const ratio = new Intl.NumberFormat('en-GB', {
   maximumFractionDigits: 2,
 })
 
+// A rate already expressed in percent, such as CTR: 1.234 reads "1.23%".
+export const percent = (n) => (n == null ? '—' : `${ratio.format(n)}%`)
+
+/* Change on the previous period as a whole, signed percentage. */
+export const percentChange = (change) => {
+  if (change == null) return '—'
+  const pct = Math.round(change * 100)
+  if (pct === 0) return '0%'
+  return `${pct > 0 ? '+' : '−'}${Math.abs(pct)}%`
+}
+
 /* Formats a value in the units of whichever metric this client is measured on,
    so a Leads target reads "40" and a Cost per lead target reads "£2.50". */
 export function metricValue(value, unit) {

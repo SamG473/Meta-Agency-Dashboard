@@ -80,6 +80,15 @@ fields were pulled have no value, and zero would be a lie rather than a gap.
 A legacy `target_cpr` column still exists in the live database. It is unused;
 `init_db()` copies any remaining value into `target_value` on startup.
 
+**`adset_daily_insights`** — one row per ad set per day, upserted idempotently by
+the same ingest run. Feeds the Analytics breakdown; campaign totals are a
+grouping of these rows.
+| column | notes |
+|---|---|
+| `account_id`, `adset_id`, `date` | composite primary key |
+| `adset_name`, `campaign_id`, `campaign_name` | kept per day; the API shows the latest names |
+| `spend`, `impressions`, `clicks`, `conversions` | non-null; conversions counted exactly like the account row |
+
 ## Goal metrics
 Defined in `GOAL_METRICS` in `app/main.py`. Each carries a `label`, a `unit`
 (`currency` / `count` / `ratio`) and a `direction`.
@@ -105,20 +114,28 @@ days. It carries a `note` saying so.
 - `GET /api/metrics` — the goal metrics on offer, so the UI cannot drift from
   what the server accepts.
 - `PUT /api/targets/{account_id}` — set a client's goal metric and target.
+- `GET /api/analytics?account_id=…&days=N` — one client, read-only: totals for the
+  window and for the equal-length period before it (none when `days=0`), signed
+  changes, a daily CPA/CTR series, and the ad set breakdown. Omitting
+  `account_id` picks the first known account.
 
 ## Key components
 ```
-ingest/run.py          Meta pull; yesterday by default, --days/--since for backfill
+ingest/run.py          Meta pull, account + ad set level; yesterday by default,
+                       --days/--since for backfill
 ingest/db.py           schema, migrations, idempotent upserts
 app/main.py            API, goal-metric registry, state evaluation
 frontend/src/main.jsx          router: nav bar, / (App) and /analytics
 frontend/src/App.jsx           Overview page: panels, client table, state chips
-frontend/src/Analytics.jsx     Analytics page — placeholder only, no figures
+frontend/src/Analytics.jsx     Analytics page: comparison strip, CPA/CTR trends, ad set table
+frontend/src/reportingWindow.js  ?window= URL state, shared by both pages
 frontend/src/format.js         unit-aware value formatting, state labels
 frontend/src/api.js            fetch wrappers
 frontend/src/styles.css        the design system (tokens on :root)
 frontend/src/components/
   NavBar.jsx                   app header: agency name + Overview / Analytics tabs
+  WindowSelector.jsx           30 days / 90 days / All toggle
+  TrendChart.jsx               one-metric daily line chart (Analytics)
   GoalCell.jsx                 pick a client's goal metric
   TargetCell.jsx               set the target, in that metric's units
   VitalsTrace.jsx              per-row sparkline of the goal metric
@@ -132,9 +149,9 @@ frontend/src/components/
 - **Per-client target tracking (built).** Originally v2; the user explicitly
   authorised it on 2026-09-10.
 - **Not built:** the needs-attention feed, alerting/notifications, deployment.
-- **Analytics page (placeholder only).** The route and nav tab were authorised
-  by the user on 2026-09-11; its content is a separate, later pass. Until then it
-  shows "Coming soon" and no figures.
+- **Analytics page (built, read-only).** Authorised by the user on 2026-09-11:
+  period-over-period comparison, CPA and CTR trends, ad set breakdown for one
+  client. No editing on this page.
 - **No mobile version.** Desktop only, by the user's decision on 2026-09-11: no
   breakpoints, no viewport meta tag. Do not add a responsive layout.
 - Do NOT build anything beyond this (extra dashboards, LLM features, write
@@ -145,7 +162,8 @@ frontend/src/components/
   *every* Meta action type — link clicks, page engagement, video views — so the
   stored figure shows more conversions than clicks on most days. Any cost-per-
   result derived from it reads roughly twice as favourable as reality. Not yet
-  fixed; do not quote these figures as accurate.
+  fixed; do not quote these figures as accurate. The Analytics page's CPA (and
+  the ad set breakdown) inherit this, and the page says so in a caption.
 - The nightly GitHub Actions cron was blocked by Meta pending business
   verification. Verification completed 2026-09-10 and API access is restored, but
   the workflow has not been re-triggered since. Ingest is run manually.

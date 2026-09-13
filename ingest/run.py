@@ -8,6 +8,9 @@ Also supports a one-off historical backfill:
 
 With no date arguments the behaviour is unchanged (yesterday only), so the
 nightly job keeps working exactly as before.
+
+Every run pulls the same window twice: once at account level, and once broken
+down by ad set for the Analytics page's campaign / ad set breakdown.
 """
 import argparse
 import os
@@ -19,7 +22,7 @@ from facebook_business.adobjects.adaccount import AdAccount
 from facebook_business.adobjects.adsinsights import AdsInsights
 from facebook_business.api import FacebookAdsApi
 
-from ingest.db import get_engine, init_db, upsert_daily_insight
+from ingest.db import get_engine, init_db, upsert_adset_daily_insight, upsert_daily_insight
 
 INSIGHT_FIELDS = [
     AdsInsights.Field.date_start,
@@ -31,6 +34,20 @@ INSIGHT_FIELDS = [
     # and action_values carries purchase revenue, which ROAS needs.
     AdsInsights.Field.reach,
     AdsInsights.Field.action_values,
+]
+
+# Ad-set level, for the Analytics breakdown. Each row names its campaign too,
+# so campaign totals come from grouping these rather than from another pull.
+ADSET_FIELDS = [
+    AdsInsights.Field.date_start,
+    AdsInsights.Field.campaign_id,
+    AdsInsights.Field.campaign_name,
+    AdsInsights.Field.adset_id,
+    AdsInsights.Field.adset_name,
+    AdsInsights.Field.spend,
+    AdsInsights.Field.impressions,
+    AdsInsights.Field.clicks,
+    AdsInsights.Field.actions,
 ]
 
 # Action types that represent real purchase revenue, for ROAS.
@@ -68,18 +85,18 @@ def purchase_value(action_values: list[dict] | None) -> float | None:
     )
 
 
-def build_params(since: date | None, until: date | None) -> dict:
+def build_params(since: date | None, until: date | None, level: str = "account") -> dict:
     """Yesterday-only by default; a daily-broken-down range when backfilling.
 
     time_increment=1 makes Meta return one row per day for the whole range in
     a single call, rather than us issuing one request per day.
     """
     if since is None:
-        return {"date_preset": "yesterday", "level": "account"}
+        return {"date_preset": "yesterday", "level": level}
     return {
         "time_range": {"since": since.isoformat(), "until": until.isoformat()},
         "time_increment": 1,
-        "level": "account",
+        "level": level,
     }
 
 
@@ -125,6 +142,41 @@ def pull_account(
             f"revenue={revenue if revenue is not None else '-'} (stored)"
         )
 
+    return stored
+
+
+def pull_adsets(
+    account_id: str, engine, since: date | None = None, until: date | None = None
+) -> int:
+    """The same window broken down by ad set. Results are counted with the same
+    total_conversions as the account row, so the breakdown and the account
+    totals measure results the same way (inflated included — see CLAUDE.md).
+    """
+    account = AdAccount(account_id)
+    insights = account.get_insights(
+        fields=ADSET_FIELDS,
+        params=build_params(since, until, level="adset"),
+    )
+
+    stored = 0
+    for row in insights:
+        upsert_adset_daily_insight(
+            engine,
+            account_id=account_id,
+            adset_id=row["adset_id"],
+            insight_date=datetime.strptime(row["date_start"], "%Y-%m-%d").date(),
+            adset_name=row.get("adset_name"),
+            campaign_id=row["campaign_id"],
+            campaign_name=row.get("campaign_name"),
+            spend=float(row.get("spend", 0)),
+            impressions=int(row.get("impressions", 0)),
+            clicks=int(row.get("clicks", 0)),
+            conversions=total_conversions(row.get("actions")),
+        )
+        stored += 1
+
+    window = "yesterday" if since is None else f"{since}..{until}"
+    print(f"{account_id}: {stored} ad set row(s) stored for {window}")
     return stored
 
 
@@ -180,11 +232,13 @@ def main() -> None:
     init_db(engine)
 
     total = 0
+    adset_total = 0
     for account_id in load_account_ids():
         total += pull_account(account_id, engine, since, until)
+        adset_total += pull_adsets(account_id, engine, since, until)
 
     window = "yesterday" if since is None else f"{since}..{until}"
-    print(f"\nDone: {total} row(s) stored for {window}.")
+    print(f"\nDone: {total} account row(s) and {adset_total} ad set row(s) stored for {window}.")
 
 
 if __name__ == "__main__":

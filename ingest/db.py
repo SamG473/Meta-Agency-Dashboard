@@ -55,6 +55,24 @@ account_targets = Table(
     Column("updated_at", DateTime(timezone=True), nullable=False),
 )
 
+# Ad-set detail for the Analytics breakdown: one row per ad set per day. Each
+# row carries its campaign, so campaign totals are a grouping of these rather
+# than a second pull. Names are kept per day because Meta lets them change.
+adset_daily_insights = Table(
+    "adset_daily_insights",
+    metadata,
+    Column("account_id", String, primary_key=True),
+    Column("adset_id", String, primary_key=True),
+    Column("date", Date, primary_key=True),
+    Column("adset_name", String, nullable=True),
+    Column("campaign_id", String, nullable=False),
+    Column("campaign_name", String, nullable=True),
+    Column("spend", Float, nullable=False),
+    Column("impressions", Integer, nullable=False),
+    Column("clicks", Integer, nullable=False),
+    Column("conversions", Integer, nullable=False),
+)
+
 # Columns added after the tables first shipped. `create_all` will not alter an
 # existing table, so these run as idempotent ALTERs on every init.
 _ADDED_COLUMNS = (
@@ -161,6 +179,49 @@ def upsert_account_target(
             "goal_metric": stmt.excluded.goal_metric,
             "target_value": stmt.excluded.target_value,
             "updated_at": stmt.excluded.updated_at,
+        },
+    )
+    with engine.begin() as conn:
+        conn.execute(stmt)
+
+
+def upsert_adset_daily_insight(
+    engine: Engine,
+    account_id: str,
+    adset_id: str,
+    insight_date: date,
+    adset_name: str | None,
+    campaign_id: str,
+    campaign_name: str | None,
+    spend: float,
+    impressions: int,
+    clicks: int,
+    conversions: int,
+) -> None:
+    values = {
+        "account_id": account_id,
+        "adset_id": adset_id,
+        "date": insight_date,
+        "adset_name": adset_name,
+        "campaign_id": campaign_id,
+        "campaign_name": campaign_name,
+        "spend": spend,
+        "impressions": impressions,
+        "clicks": clicks,
+        "conversions": conversions,
+    }
+    insert = pg_insert if engine.dialect.name == "postgresql" else sqlite_insert
+    stmt = insert(adset_daily_insights).values(**values)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["account_id", "adset_id", "date"],
+        set_={
+            "adset_name": stmt.excluded.adset_name,
+            "campaign_id": stmt.excluded.campaign_id,
+            "campaign_name": stmt.excluded.campaign_name,
+            "spend": stmt.excluded.spend,
+            "impressions": stmt.excluded.impressions,
+            "clicks": stmt.excluded.clicks,
+            "conversions": stmt.excluded.conversions,
         },
     )
     with engine.begin() as conn:
