@@ -1,0 +1,972 @@
+@import '@fontsource-variable/archivo/index.css';
+
+/* ---------------------------------------------------------------------------
+   The Ward Board.
+   Clinical enamel ground, graphite ink, hairline rules. Saturation is spent on
+   exactly one thing: an account past its own target. Everything healthy, quiet,
+   or merely interrupted is rendered in ink, and reads as calm on purpose.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --ground: #e9eeec;
+  --ground-sunk: #dfe6e3;
+  --ground-raised: #f2f5f3;
+  --ink: #16191a;
+  /* The only secondary ink. #7d8882 was retired: at 3.13:1 on this ground it
+     failed the contrast floor, and it carried the quiet vocabulary, which is
+     this board's common case rather than its edge. */
+  --ink-soft: #59635e;
+  --rule: #c6d0cb;
+  --rule-strong: #a4b2aa;
+  --alarm: #b81f27;
+  --alarm-wash: #f0d9da;
+  /* On track. 4.9:1 on the ground, so it clears the contrast floor as text. */
+  --ok: #1a6b43;
+  /* At risk: behind the pace but not yet past saving. A second saturated hue
+     was not in the original direction — it is here because a three-state badge
+     needs a middle, and grey would read as "no information". 5.9:1 as text. */
+  --warn: #8a5a00;
+
+  --t-lead: 1.1875rem;
+  --t-body: 0.9375rem;
+  --t-label: 0.6875rem;
+  --t-micro: 0.625rem;
+
+  --board-max: 1360px;
+  --gutter: clamp(1.25rem, 3.5vw, 3rem);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif;
+  font-size: var(--t-body);
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Browser surfaces belong to the design system too. */
+::selection {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+* {
+  caret-color: var(--alarm);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) var(--ground);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--ground);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+  border: 3px solid var(--ground);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-soft);
+}
+
+/* --- shared type registers ------------------------------------------------ */
+
+.label {
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.micro {
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* The board's band names, "Portfolio totals" and "Clients". Uppercase like the
+   captions, but in ink at lead size and full weight, so a band's name never
+   reads as one more label beside the column headers beneath it. */
+.heading {
+  margin: 0;
+  font-size: var(--t-lead);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* --- shell ---------------------------------------------------------------- */
+
+/* The band gap above the first panel keeps the page clear of the nav bar. */
+.board {
+  max-width: var(--board-max);
+  margin: 0 auto;
+  padding: 2.5rem var(--gutter) 3rem;
+}
+
+/* The board's two bands, each one unfilled hairline box, square like every
+   other surface: Portfolio totals with its retained history, then Clients.
+   Whatever shares a panel reads as one unit. */
+.panel {
+  border: 1px solid var(--rule);
+  padding: 1.25rem 1.5rem;
+}
+
+.panel + .panel {
+  margin-top: 2.5rem;
+}
+
+/* --- app bar -------------------------------------------------------------- */
+
+/* The app's header. Its hairline runs the full width of the window; its
+   contents sit on the board's own column, left-aligned, so the name and tabs
+   start exactly where the panels below do. */
+.appbar {
+  border-bottom: 1px solid var(--rule);
+}
+
+.appbar__inner {
+  display: flex;
+  align-items: stretch;
+  max-width: var(--board-max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+/* The agency's name set in the system face, not a logo. Mixed case against the
+   tabs' uppercase, and parted from them by a short hairline. */
+.appbar__brand {
+  align-self: center;
+  margin-right: 1.75rem;
+  padding-right: 1.75rem;
+  border-right: 1px solid var(--rule);
+  font-size: var(--t-lead);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.appbar__nav {
+  display: flex;
+  gap: 2rem;
+}
+
+/* Muted until current. The current tab darkens and takes a 2px ink underline
+   that lands on the bar's own hairline (hence the -1px). Weight never changes
+   between states, so switching tabs moves nothing. */
+.appbar__tab {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem 0;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-size: var(--t-body);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  transition: color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+}
+
+.appbar__tab:hover {
+  color: var(--ink);
+  border-bottom-color: var(--rule-strong);
+}
+
+.appbar__tab[aria-current='page'] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* Demo instances only. Pinned right in the bar so it is on screen on every
+   page and cannot be scrolled past, but set as a chip in soft ink: a standing
+   fact about the instance, not an alarm. */
+.appbar__demo {
+  align-self: center;
+  margin: 0 0 0 auto;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--rule-strong);
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* The strip's heading on the left, the reporting window pinned right against
+   it. The heading belongs to the rule below, so the row keeps it at the bottom:
+   wrap-reverse sends the selector up a line when the two cannot share one, and
+   under wrap-reverse flex-start is the bottom of the line. */
+.controls {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  gap: 0.5rem 1.5rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.controls .windows {
+  margin-left: auto;
+}
+
+/* --- window selector ------------------------------------------------------ */
+
+.windows {
+  display: flex;
+  border: 1px solid var(--rule-strong);
+}
+
+.windows__btn {
+  appearance: none;
+  border: 0;
+  border-right: 1px solid var(--rule-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+  transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out);
+}
+
+.windows__btn:last-child {
+  border-right: 0;
+}
+
+.windows__btn:hover {
+  background: var(--ground-sunk);
+  color: var(--ink);
+}
+
+.windows__btn[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+/* --- portfolio strip: the page's heading ---------------------------------- */
+
+/* Close under the Portfolio totals heading, so the name sits on its rule. */
+.topline {
+  padding: 0.625rem 0 0;
+}
+
+.loading {
+  padding: clamp(1.5rem, 4vw, 2.5rem) 0;
+}
+
+/* Opens on the heading's ink rule. No closing rule: the retained history
+   carries on beneath it inside the same panel. */
+.strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  border-top: 1px solid var(--ink);
+}
+
+.strip__cell {
+  padding: 1rem 1.75rem 1.1rem 0;
+  border-right: 1px solid var(--rule);
+}
+
+/* Every cell but the first is indented off the divider on its left. The first
+   stays flush so the strip still aligns with the board's left edge below. */
+.strip__cell + .strip__cell {
+  padding-left: 1.75rem;
+}
+
+.strip__cell:last-child {
+  border-right: 0;
+}
+
+/* Carrying the page now, so set at heading scale rather than as a stat label. */
+.strip__value {
+  display: block;
+  font-size: clamp(1.75rem, 2.8vw, 2.375rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin-top: 0.25rem;
+}
+
+.strip__value--muted {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+/* For a tile that cannot follow the selected window, because what it counts
+   only exists as of now. */
+.strip__note {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* --- ward table ----------------------------------------------------------- */
+
+/* The client list's panel. Unfilled, so an expanded history panel (raised
+   ground) still reads as a surface inside it. The minimum height holds room for
+   about three rows, so a single client reads as the start of a list rather than
+   the whole of it. */
+.ward {
+  min-height: 20rem;
+}
+
+/* The same gap to the column headers as Portfolio totals keeps to its rule. */
+.ward__heading {
+  margin-bottom: 0.625rem;
+}
+
+.ward__heading + .notice {
+  margin: 0;
+}
+
+/* Fixed layout, proportional columns, one alignment.
+
+   Two things made this row hard to space, and both are settled here rather
+   than tuned column by column.
+
+   First, under `table-layout: fixed` an unsized column swallows all the slack
+   the sized ones leave behind. History had no width rule, so it became a
+   several-hundred-pixel cell with a small button at its left edge: the other
+   gaps were already equal, but the row read as bunched left against a dead
+   zone on the right. Every column now carries a width and the seven sum to
+   100%, so there is no slack for anything to swallow.
+
+   Second, Target and Actual used to be right-aligned while everything else was
+   left-aligned. That meant widening a column moved its content left or right
+   depending on which column you touched, and the visible gap between two
+   neighbours was one column's trailing space plus the next one's leading
+   space. Everything is left-aligned now: each header sits at its column's left
+   edge with its content directly beneath, so the gap you see between any two
+   columns is just the padding between them.
+
+   The cost is that figures no longer line up on their last digit. With a
+   handful of accounts that is invisible; if the board ever holds thirty rows
+   of six-figure amounts, put `text-align: right` back on Target and Actual and
+   accept the per-column tuning that comes with it. */
+.ward__table,
+.breakdown {
+  /* Half the gap between columns. */
+  --cell-gap: 0.75rem;
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+/* Sized to the widest real content each column has to hold: a client name,
+   "Cost per result", a six-figure amount, the 132px trace (VitalsTrace.jsx),
+   the "No target" chip, the "Hide history" control. */
+.ward__table th:nth-child(1) { width: 18%; }
+.ward__table th:nth-child(2) { width: 12%; }
+.ward__table th:nth-child(3) { width: 12%; }
+.ward__table th:nth-child(4) { width: 12%; }
+.ward__table th:nth-child(5) { width: 18%; }
+.ward__table th:nth-child(6) { width: 16%; }
+.ward__table th:nth-child(7) { width: 12%; }
+
+/* The Analytics breakdown: a name column, the ad set's goal, then figures with
+   a unit caption under each. */
+.breakdown th:nth-child(1) { width: 34%; }
+.breakdown th:nth-child(2) { width: 14%; }
+.breakdown th:nth-child(3) { width: 14%; }
+.breakdown th:nth-child(4) { width: 19%; }
+.breakdown th:nth-child(5) { width: 19%; }
+
+.ward__table thead th,
+.breakdown thead th {
+  text-align: left;
+  padding: 0 var(--cell-gap) 0.5rem;
+  border-bottom: 1px solid var(--ink);
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* Header nudges. Moves the label only — not the column width, not the cell
+   beneath it. */
+.ward__table thead th:nth-child(1) { padding-left: 0; }
+.ward__table thead th:nth-child(2) { padding-left: 0.90rem; }
+.ward__table thead th:nth-child(3) { padding-left: 0.75rem; }
+.ward__table thead th:nth-child(4) { padding-left: 0.75rem; }
+.ward__table thead th:nth-child(5) { padding-left: 3.30rem; }
+.ward__table thead th:nth-child(6) { padding-left: 2.4rem; }
+.ward__table thead th:nth-child(7) { padding-left: 0.75rem; }
+
+
+.row {
+  border-bottom: 1px solid var(--rule);
+}
+
+.row > td {
+  padding: 0.9rem var(--cell-gap);
+  vertical-align: middle;
+}
+
+/* The outer edges stay flush so the row lines up with the rules above and
+   below it. Every column between gets the same gap on both sides. */
+.ward__table th:first-child,
+.breakdown th:first-child,
+.row > td:first-child {
+  padding-left: 0;
+}
+
+.ward__table th:last-child,
+.breakdown th:last-child,
+.row > td:last-child {
+  padding-right: 0;
+}
+
+.row__client {
+  display: block;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.row__id {
+  display: block;
+  font-size: var(--t-micro);
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  margin-top: 0.15rem;
+}
+
+.row__figure {
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.row__figure--absent {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.row--alarm .row__figure--actual {
+  color: var(--alarm);
+}
+
+.row__expand {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out),
+    border-color 0.15s var(--ease-out);
+}
+
+.row__expand:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ground);
+}
+
+/* --- state chips: shape and weight carry state, not hue ------------------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--rule-strong);
+  color: var(--ink-soft);
+}
+
+.chip--on_track,
+.chip--met {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.chip--at_risk {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+/* no_end_date, not_started, no_target and no_data keep the chip's default
+   strong-rule and soft ink: the board knows nothing about their standing, and
+   neither green nor red would be honest. */
+
+/* Outlined, not filled: the glyph already carries the state in greyscale, so a
+   solid block here would be the largest red mass on the page and would compete
+   with the numbers it is describing. */
+.chip--behind,
+.chip--missed {
+  border-color: var(--alarm);
+  color: var(--alarm);
+}
+
+/* Where the client is in its period, under the badge that judges it. */
+.row__pace {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.chip__glyph {
+  flex: none;
+}
+
+/* --- retained trend trace ------------------------------------------------- */
+
+.trace {
+  display: block;
+}
+
+/* --- goal metric ---------------------------------------------------------- */
+
+.goal__btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed var(--rule-strong);
+  color: inherit;
+  font: inherit;
+  font-size: var(--t-body);
+  font-weight: 600;
+  padding: 0 0 1px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s var(--ease-out);
+}
+
+.goal__btn:hover {
+  border-bottom-color: var(--ink);
+  border-bottom-style: solid;
+}
+
+.goal__select {
+  font: inherit;
+  font-size: var(--t-body);
+  font-weight: 600;
+  background: var(--ground-raised);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  padding: 0.2rem 0.35rem;
+  /* Open, the picker is wider than its label; keep it inside the Goal column. */
+  max-width: 100%;
+}
+
+/* --- target editor -------------------------------------------------------- */
+
+.target {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.target__btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed var(--rule-strong);
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 0 0 1px;
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease-out), color 0.15s var(--ease-out);
+}
+
+.target__btn:hover {
+  border-bottom-color: var(--ink);
+  border-bottom-style: solid;
+}
+
+.target__btn--empty {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.target__form {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.target__input {
+  width: 5.5rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--ground-raised);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  padding: 0.2rem 0.35rem;
+}
+
+.target__save,
+.target__cancel {
+  appearance: none;
+  border: 1px solid var(--rule-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.45rem;
+  cursor: pointer;
+}
+
+.target__save {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--ground);
+}
+
+.target__save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.target__error {
+  display: block;
+  flex-basis: 100%;
+  margin-top: 0.3rem;
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--alarm);
+  max-width: 28ch;
+}
+
+/* --- expanded history ----------------------------------------------------- */
+
+.history > td {
+  padding: 0 0 1.75rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.history__inner {
+  background: var(--ground-raised);
+  border-left: 1px solid var(--rule);
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.25rem 1.25rem 0.5rem;
+}
+
+.history__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.history__empty {
+  color: var(--ink-soft);
+  padding: 1.5rem 0 2rem;
+  max-width: 66ch;
+}
+
+.recharts-cartesian-axis-tick text {
+  fill: var(--ink-soft);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.recharts-cartesian-grid line {
+  stroke: var(--rule);
+}
+
+/* --- retained history ----------------------------------------------------- */
+
+/* Carries on straight under the strip inside the Portfolio totals panel, with
+   no rule between them, so the totals and their history read as one unit. */
+.retained {
+  padding-top: 1.25rem;
+}
+
+.retained__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+/* --- chart readout -------------------------------------------------------- */
+
+.readout {
+  background: var(--ink);
+  color: var(--ground-raised);
+  padding: 0.65rem 0.8rem;
+  min-width: 12rem;
+}
+
+.readout__date {
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rule);
+  margin-bottom: 0.4rem;
+}
+
+.readout__list {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.15rem 1rem;
+  margin: 0;
+  font-size: var(--t-body);
+}
+
+.readout__list dt {
+  color: var(--rule);
+}
+
+.readout__list dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* --- notices -------------------------------------------------------------- */
+
+.notice {
+  border: 1px solid var(--rule-strong);
+  border-top: 2px solid var(--ink);
+  padding: 1.25rem 1.5rem;
+  max-width: 70ch;
+  margin: 2.5rem 0;
+}
+
+.notice--alarm {
+  border-top-color: var(--alarm);
+}
+
+.notice__title {
+  margin: 0 0 0.4rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.notice__body {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.notice__body + .notice__body {
+  margin-top: 0.6rem;
+}
+
+/* --- analytics ------------------------------------------------------------ */
+
+/* A panel's heading with a caption pinned right against it, as the retained
+   history head does. */
+.panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.panel__caption {
+  margin: 0.75rem 0 0;
+}
+
+.panel__caption + .panel__caption {
+  margin-top: 0.35rem;
+}
+
+.panel__empty {
+  margin: 0;
+  padding: 1.5rem 0 1rem;
+  max-width: 66ch;
+  color: var(--ink-soft);
+}
+
+/* The client picker and the reporting window share the right of the top row. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  margin-left: auto;
+}
+
+.picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Period-over-period change under each stat. Registered like a chip: micro,
+   uppercase, a 9x9 glyph for direction. Muted by default; green only when the
+   change is an improvement. */
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.delta--better {
+  color: var(--ok);
+}
+
+.delta__glyph {
+  flex: none;
+}
+
+/* --- utility -------------------------------------------------------------- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Shell commands stay in the one family. A system mono stack here was the only
+   break in that rule, and it imported a face belonging to no design system;
+   the sunk ground and hairline already mark these as literal strings, so the
+   distinction never needed a second family to carry it. */
+code {
+  font-family: inherit;
+  font-size: 0.9375em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  background: var(--ground-sunk);
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--rule);
+}
+
+/* --- motion: one authored entrance, one authored exception ---------------- */
+
+@keyframes rack-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The exception the whole board exists to show, arriving once and never
+   repeating. Content is fully legible from the first frame. */
+@keyframes breach-arrive {
+  from {
+    background-color: var(--alarm-wash);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.row--enter {
+  animation: rack-in 0.5s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+
+.row--enter.row--alarm {
+  animation: rack-in 0.5s var(--ease-out) backwards,
+    breach-arrive 1.3s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 55ms), calc(var(--i, 0) * 55ms + 420ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

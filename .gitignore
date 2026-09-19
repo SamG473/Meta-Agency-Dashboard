@@ -11,3 +11,10 @@ venv/
 
 .DS_Store
 .vscode/
+
+# Per-machine tool state and local config: never belongs in a public repo.
+*.local.json
+.impeccable/hook.cache.json
+
+frontend/node_modules/
+frontend/dist/
