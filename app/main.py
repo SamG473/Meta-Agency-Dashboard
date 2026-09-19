@@ -18,10 +18,16 @@ from ingest.db import (
     upsert_account_target,
 )
 from ingest.results import result_label
+from app.demo import DEMO_MODE, build_demo_engine
 
 load_dotenv()
 app = FastAPI(title="Meta Agency Dashboard")
-engine = get_engine()
+
+# The whole demo switch, in one place. In demo mode the API talks to an
+# in-memory database holding a fictional portfolio, so every route below runs
+# unchanged and the real store is never opened — DATABASE_URL is not read, and
+# no request can reach a real client's figures.
+engine = build_demo_engine() if DEMO_MODE else get_engine()
 
 # The dashboard is served from a separate dev server in development.
 app.add_middleware(
@@ -41,8 +47,12 @@ app.add_middleware(
 # missing a leads target is a shortfall, missing a cost target is an overspend.
 # Alert-only throughout — breaching a target notifies, it never touches a
 # campaign (CLAUDE.md).
+# `cumulative` marks a metric that accumulates over a period, so a target for it
+# can be paced: 24,000 reach is 40% delivered at 40% elapsed. A rate metric
+# cannot — a £2 cost per lead is not £0.80 at 40% elapsed — so those are judged
+# against their target directly, with no time dimension.
 GOAL_METRICS = {
-    "leads": {"label": "Leads", "unit": "count", "direction": "higher"},
+    "leads": {"label": "Leads", "unit": "count", "direction": "higher", "cumulative": True},
     "roas": {"label": "ROAS", "unit": "ratio", "direction": "higher"},
     "cost_per_lead": {"label": "Cost per lead", "unit": "currency", "direction": "lower"},
     "cost_per_result": {
@@ -54,6 +64,7 @@ GOAL_METRICS = {
         "label": "Reach",
         "unit": "count",
         "direction": "higher",
+        "cumulative": True,
         # Daily reach summed over the window. Meta deduplicates people within a
         # day but not across days, so this over-counts unique reach.
         "note": "summed daily reach, not deduplicated across days",
@@ -61,6 +72,10 @@ GOAL_METRICS = {
 }
 
 DEFAULT_GOAL_METRIC = "cost_per_result"
+
+# Delivering at least this share of the pace a target implies is "at risk";
+# below it is "behind". At or above the full pace is "on track".
+AT_RISK_PACE = 0.85
 
 
 def _ctr(clicks: int, impressions: int) -> float:
@@ -71,6 +86,10 @@ class TargetIn(BaseModel):
     client_name: str | None = Field(default=None, max_length=200)
     goal_metric: str | None = Field(default=None)
     target_value: float | None = Field(default=None, gt=0)
+    # The period a cumulative target applies to, for clients whose campaigns
+    # carry no stop time. Omitted fields leave any existing period alone.
+    period_start: date | None = Field(default=None)
+    period_end: date | None = Field(default=None)
 
 
 def _metric_actual(metric: str, spend: float, results: int | None, reach: int | None,
@@ -116,13 +135,11 @@ def _basis(lowest: str | None, highest: str | None) -> str | None:
     return lowest if lowest == highest else "mixed"
 
 
-def _evaluate(metric: str | None, target: float | None, actual: float | None):
-    """Standing against this client's OWN target. Returns (state, deviation),
-    where deviation is signed so that positive always means worse, whichever
-    direction the metric runs.
+def _evaluate_rate(metric: str, target: float, actual: float | None):
+    """A rate goal — cost per result, cost per lead, ROAS — against its target.
+    There is no pace to judge: the target is the rate itself, at any moment in
+    the period. Deviation is signed so positive always means worse.
     """
-    if metric is None or target is None:
-        return "no_target", None
     if actual is None:
         return "no_data", None
 
@@ -134,8 +151,154 @@ def _evaluate(metric: str | None, target: float | None, actual: float | None):
     return state, round(deviation, 4)
 
 
+def _goal_period(conn, account_id: str, target_row, today: date):
+    """(start, end, source) for the period a cumulative target applies to.
+
+    A period set by hand wins. Otherwise the campaigns running today define it,
+    so a client with an old finished campaign and a current one is judged on the
+    current one. With nothing running, the most recently finished campaign is
+    used, which is what lets a goal read met or missed. A campaign with no stop
+    time is open-ended and cannot be paced at all.
+    """
+    if target_row is not None and getattr(target_row, "period_end", None) is not None:
+        return target_row.period_start, target_row.period_end, "manual"
+
+    dated = [
+        (row.start_time.date(), row.stop_time.date())
+        for row in conn.execute(
+            select(campaigns.c.start_time, campaigns.c.stop_time).where(
+                campaigns.c.account_id == account_id,
+                campaigns.c.effective_status == "ACTIVE",
+                campaigns.c.account_active.is_(True),
+            )
+        ).all()
+        if row.start_time is not None and row.stop_time is not None
+    ]
+    if not dated:
+        return None, None, None
+
+    running = [(start, end) for start, end in dated if start <= today <= end]
+    if running:
+        return min(s for s, _ in running), max(e for _, e in running), "campaigns"
+
+    finished = [(start, end) for start, end in dated if end < today]
+    if finished:
+        latest = max(e for _, e in finished)
+        return min(s for s, e in finished if e == latest), latest, "campaigns"
+
+    starts_next = min(dated, key=lambda period: period[0])
+    return starts_next[0], starts_next[1], "campaigns"
+
+
+def _pace(target: float, actual: float, start: date, end: date, today: date) -> dict:
+    """Progress against the pace the target implies, rather than against its
+    total. Whole days throughout, and the elapsed share is clamped to 0–1.
+    """
+    total_days = (end - start).days + 1
+    elapsed_days = min(max((today - start).days + 1, 0), total_days)
+    elapsed_fraction = elapsed_days / total_days
+    expected = round(target * elapsed_fraction, 2)
+
+    return {
+        "period_start": str(start),
+        "period_end": str(end),
+        "total_days": total_days,
+        "elapsed_days": elapsed_days,
+        "days_left": max((end - today).days, 0),
+        "elapsed_fraction": round(elapsed_fraction, 4),
+        "expected_to_date": expected,
+        "pace_ratio": round(actual / expected, 4) if expected else None,
+        # The period's own figure, not the window the board happens to show, so
+        # switching 30/90/All never changes the state.
+        "period_actual": actual,
+        "ended": today > end,
+    }
+
+
+def _state_from_pace(pace: dict, target: float, actual: float):
+    """State and signed deviation from pace. Deviation stays positive-is-worse:
+    here it is the shortfall against what should have been delivered by now.
+    """
+    if pace["ended"]:
+        return ("met", None) if actual >= target else ("missed", None)
+
+    ratio = pace["pace_ratio"]
+    if ratio is None:  # the period has not started, so nothing is due yet
+        return "not_started", None
+
+    deviation = round(1 - ratio, 4)
+    if ratio >= 1.0:
+        return "on_track", deviation
+    if ratio >= AT_RISK_PACE:
+        return "at_risk", deviation
+    return "behind", deviation
+
+
+def _metric_over_period(conn, account_id: str, metric: str, start: date, end: date):
+    """This client's goal metric over its own period, which is what a pace
+    judgement has to be made against.
+    """
+    spend, results, reach, revenue, basis_low, basis_high = conn.execute(
+        select(
+            func.coalesce(func.sum(daily_insights.c.spend), 0.0),
+            func.sum(daily_insights.c.results),
+            func.sum(daily_insights.c.reach),
+            func.sum(daily_insights.c.purchase_value),
+            func.min(daily_insights.c.results_basis),
+            func.max(daily_insights.c.results_basis),
+        ).where(
+            daily_insights.c.account_id == account_id,
+            daily_insights.c.date >= start,
+            daily_insights.c.date <= end,
+        )
+    ).one()
+
+    return _metric_actual(
+        metric,
+        spend,
+        int(results) if results is not None else None,
+        reach,
+        revenue,
+        _basis(basis_low, basis_high),
+    )
+
+
 # States that put an account on the board's attention count.
-ATTENTION_STATES = {"behind", "no_data"}
+ATTENTION_STATES = {"behind", "at_risk", "missed", "no_data"}
+
+# Pace health. A client whose pace cannot be judged at all — no period end, no
+# target, no delivery, not started — is excluded from both halves of the count
+# rather than counted as a failure.
+PACE_HEALTHY = {"on_track", "met"}
+PACE_JUDGED = PACE_HEALTHY | {"at_risk", "behind", "missed"}
+
+# How recently a campaign must have delivered to count as running. A week is
+# long enough to survive a quiet weekend or a day the ingest missed.
+RECENT_DELIVERY = timedelta(days=7)
+
+
+def _is_delivering(campaign, delivering_ids: set[str], today: date) -> bool:
+    """Whether a campaign is actually running.
+
+    `effective_status` alone cannot answer this: a campaign whose flight ended
+    keeps reporting ACTIVE forever if nobody paused it, which is why the board
+    counted a campaign that finished ten weeks ago. "Active" is a judgement
+    call, so it is made here and nowhere else.
+
+    Counted when Meta says ACTIVE on a live account, the flight has not ended,
+    and either it delivered impressions in the last week or it is too newly
+    started (or scheduled too late) to have delivered any yet.
+    """
+    if campaign.effective_status != "ACTIVE" or not campaign.account_active:
+        return False
+    if campaign.stop_time is not None and campaign.stop_time.date() < today:
+        return False
+    if campaign.campaign_id in delivering_ids:
+        return True
+    return (
+        campaign.start_time is not None
+        and campaign.start_time.date() >= today - RECENT_DELIVERY
+    )
 
 
 @app.get("/api/board")
@@ -234,7 +397,33 @@ def board(days: int = 30):
             ]
 
             actual = _metric_actual(metric, spend, results, reach, revenue, results_basis)
-            state, deviation = _evaluate(metric, target, actual)
+
+            # Pace, not total. A cumulative goal is judged on how much of its
+            # period has run; without a period end there is no pace to judge, and
+            # comparing against the full target would be the misleading thing
+            # this replaced.
+            pace = None
+            if target is None:
+                state, deviation = "no_target", None
+            elif not metric_spec.get("cumulative"):
+                state, deviation = _evaluate_rate(metric, target, actual)
+            else:
+                period_start, period_end, period_source = _goal_period(
+                    conn, account_id, target_row, today
+                )
+                if period_end is None:
+                    state, deviation = "no_end_date", None
+                else:
+                    period_actual = _metric_over_period(
+                        conn, account_id, metric, period_start, min(today, period_end)
+                    )
+                    if period_actual is None:
+                        state, deviation = "no_data", None
+                    else:
+                        pace = _pace(target, period_actual, period_start, period_end, today)
+                        pace["source"] = period_source
+                        state, deviation = _state_from_pace(pace, target, period_actual)
+
             days_since = (today - latest).days if latest else None
 
             accounts.append({
@@ -251,6 +440,8 @@ def board(days: int = 30):
                 # Positive always means worse, whichever way the metric runs.
                 "deviation": deviation,
                 "state": state,
+                # Null for a rate goal, or when there is no period to judge.
+                "pace": pace,
                 "spend": round(spend, 2),
                 "impressions": impressions,
                 "clicks": clicks,
@@ -270,35 +461,53 @@ def board(days: int = 30):
         totals_scope = [] if portfolio_since is None else [
             daily_insights.c.date >= portfolio_since
         ]
-        total_spend, total_results, total_low, total_high = conn.execute(
+        total_spend, total_results, total_impressions, total_low, total_high = conn.execute(
             select(
                 func.coalesce(func.sum(daily_insights.c.spend), 0.0),
                 func.sum(daily_insights.c.results),
+                func.coalesce(func.sum(daily_insights.c.impressions), 0),
                 func.min(daily_insights.c.results_basis),
                 func.max(daily_insights.c.results_basis),
             ).where(*totals_scope)
         ).one()
+
+        # Impressions, deliberately, not reach: they add up across days and every
+        # campaign has them whatever it optimises for, so this figure stays valid
+        # for a portfolio mixing reach, leads and conversions.
+        cpm = (
+            round(total_spend / total_impressions * 1000, 2) if total_impressions else None
+        )
         latest_overall = conn.execute(select(func.max(daily_insights.c.date))).scalar()
 
         # Live campaign state, not a windowed figure. None rather than zero
         # when no campaign has ever been synced: unknown is not "none active".
-        campaigns_known = conn.execute(select(func.count()).select_from(campaigns)).scalar()
+        campaign_rows = conn.execute(
+            select(
+                campaigns.c.campaign_id,
+                campaigns.c.effective_status,
+                campaigns.c.account_active,
+                campaigns.c.start_time,
+                campaigns.c.stop_time,
+            )
+        ).all()
+        delivering_ids = {
+            row.campaign_id
+            for row in conn.execute(
+                select(adset_daily_insights.c.campaign_id)
+                .where(adset_daily_insights.c.date >= today - RECENT_DELIVERY)
+                .group_by(adset_daily_insights.c.campaign_id)
+                .having(func.sum(adset_daily_insights.c.impressions) > 0)
+            ).all()
+        }
         active_campaigns = (
-            conn.execute(
-                select(func.count())
-                .select_from(campaigns)
-                .where(
-                    campaigns.c.effective_status == "ACTIVE",
-                    campaigns.c.account_active.is_(True),
-                )
-            ).scalar()
-            if campaigns_known
+            sum(1 for row in campaign_rows if _is_delivering(row, delivering_ids, today))
+            if campaign_rows
             else None
         )
 
-        # Retained history across the whole portfolio, deliberately independent
-        # of the selected window: this is the record Meta's own interface
-        # discards, and the board should always be able to show it.
+        # Scoped to the selected window, like the tiles above it, so the whole
+        # Portfolio totals panel describes one range. What is stored is reported
+        # separately as `retention` rather than silently widening this series.
         portfolio_history = [
             {
                 "date": str(row.date),
@@ -313,10 +522,22 @@ def board(days: int = 30):
                     func.sum(daily_insights.c.results).label("results"),
                     func.count(func.distinct(daily_insights.c.account_id)).label("accounts"),
                 )
+                .where(*totals_scope)
                 .group_by(daily_insights.c.date)
                 .order_by(daily_insights.c.date)
             ).all()
         ]
+
+        # What the store actually holds, whatever window is selected. The board
+        # says this out loud when the window reaches back further than the
+        # record, instead of quietly showing a different range.
+        stored_days, stored_first, stored_last = conn.execute(
+            select(
+                func.count(func.distinct(daily_insights.c.date)),
+                func.min(daily_insights.c.date),
+                func.max(daily_insights.c.date),
+            )
+        ).one()
 
     needing = [a for a in accounts if a["state"] in ATTENTION_STATES]
 
@@ -331,6 +552,12 @@ def board(days: int = 30):
         "portfolio": {
             "active_campaigns": active_campaigns,
             "accounts_tracked": len(accounts),
+            "cpm": cpm,
+            "impressions": int(total_impressions),
+            # Clients meeting their pace, out of those whose pace can be judged.
+            "on_pace": sum(1 for a in accounts if a["state"] in PACE_HEALTHY),
+            "pace_judged": sum(1 for a in accounts if a["state"] in PACE_JUDGED),
+            "pace_excluded": sum(1 for a in accounts if a["state"] not in PACE_JUDGED),
             "accounts_needing_attention": len(needing),
             "accounts_behind": sum(1 for a in accounts if a["state"] == "behind"),
             "accounts_untargeted": sum(
@@ -342,8 +569,24 @@ def board(days: int = 30):
             "last_data_date": str(latest_overall) if latest_overall else None,
         },
         "portfolio_history": portfolio_history,
+        "retention": {
+            "days_stored": stored_days,
+            "first_date": str(stored_first) if stored_first else None,
+            "last_date": str(stored_last) if stored_last else None,
+            # True when the window starts before anything on record, so the
+            # series cannot fill it however long the window is.
+            "starts_after_window": bool(since and stored_first and stored_first > since),
+        },
         "accounts": accounts,
     }
+
+
+@app.get("/api/config")
+def config():
+    """What the UI needs to know about this instance before it renders anything.
+    `demo` drives the banner that marks the data as fictional.
+    """
+    return {"demo": DEMO_MODE}
 
 
 @app.get("/api/metrics")
@@ -477,6 +720,17 @@ def _change(current: float | None, previous: float | None) -> float | None:
     return round((current - previous) / previous, 4)
 
 
+KNOWN_IN_ERROR = 5
+
+
+def _account_list(known: list[str]) -> str:
+    """The known account ids, capped. An error message exists to orient someone,
+    and a board with fifty clients should not recite all fifty."""
+    shown = ", ".join(known[:KNOWN_IN_ERROR])
+    extra = len(known) - KNOWN_IN_ERROR
+    return f"{shown} and {extra} more" if extra > 0 else shown
+
+
 @app.get("/api/analytics")
 def analytics(account_id: str | None = None, days: int = 30):
     """One client's analytics over a window, with the equal-length period just
@@ -518,7 +772,16 @@ def analytics(account_id: str | None = None, days: int = 30):
         if account_id is None:
             account_id = known[0]
         elif account_id not in known:
-            raise HTTPException(status_code=404, detail="Unknown account")
+            # Name the id that failed. The usual cause is a stale link — one
+            # copied from another instance, or left in the URL by demo mode —
+            # and a bare "Unknown account" gives nothing to compare against.
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"Unknown account {account_id!r}. "
+                    f"This board knows {_account_list(known)}."
+                ),
+            )
 
         current = _period_totals(conn, account_id, since, today)
         previous = previous_window = None
@@ -539,6 +802,8 @@ def analytics(account_id: str | None = None, days: int = 30):
                 daily_insights.c.results_basis,
                 daily_insights.c.impressions,
                 daily_insights.c.clicks,
+                daily_insights.c.reach,
+                daily_insights.c.frequency,
             )
             .where(*scope)
             .order_by(daily_insights.c.date)
@@ -609,6 +874,10 @@ def analytics(account_id: str | None = None, days: int = 30):
                 "results_basis": row.results_basis,
                 "impressions": row.impressions,
                 "clicks": row.clicks,
+                "reach": row.reach,
+                # Meta's own figure for the day. Null where reach is null, since
+                # there is nothing to divide by — never zero, never averaged.
+                "frequency": row.frequency,
                 "cpa": cpa,
                 "cost_per_1k_reach": (
                     round(costs["reach_spend"] / costs["reach_people"] * 1000, 2)
@@ -681,5 +950,7 @@ def set_target(account_id: str, payload: TargetIn):
         client_name=payload.client_name,
         goal_metric=payload.goal_metric,
         target_value=payload.target_value,
+        period_start=payload.period_start,
+        period_end=payload.period_end,
     )
     return {"account_id": account_id, **payload.model_dump()}

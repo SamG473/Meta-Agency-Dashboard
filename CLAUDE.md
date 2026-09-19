@@ -64,6 +64,7 @@ resolves elsewhere and will fail on `import sqlalchemy`.
 | `spend`, `impressions`, `clicks`, `conversions` | non-null |
 | `reach` | nullable — unique people, distinct from impressions |
 | `purchase_value` | nullable — revenue, for ROAS |
+| `frequency` | nullable — impressions per person that day, as Meta calculated it. Pulled, never derived: it is impressions ÷ reach for the period asked for, and reach does not add up across days, so a week's frequency is not the mean of its days. Null wherever `reach` is null |
 | `results` | nullable — each ad set's own optimisation outcome, summed for the day |
 | `results_basis` | nullable — `action`, `reach`, `mixed` or `unmapped` |
 
@@ -98,7 +99,7 @@ grouping of these rows.
 
 **`campaigns`** — each campaign's current state, refreshed on every run. A
 snapshot, not a time series: it answers "what is live right now", which is what
-the board's Active campaigns tile counts.
+`portfolio.active_campaigns` reports.
 | column | notes |
 |---|---|
 | `account_id`, `campaign_id` | composite primary key |
@@ -115,13 +116,39 @@ Defined in `GOAL_METRICS` in `app/main.py`. Each carries a `label`, a `unit`
 (`currency` / `count` / `ratio`) and a `direction`.
 
 `direction` is load-bearing: for `leads`, `roas` and `reach` **higher is better**;
-for `cost_per_lead` and `cost_per_result` **lower is better**. `_evaluate()` signs
-the deviation so positive always means *worse* regardless of direction — the UI
-depends on that, so preserve it when adding a metric.
+for `cost_per_lead` and `cost_per_result` **lower is better**. `_evaluate_rate()`
+signs the deviation so positive always means *worse* regardless of direction.
 
-Account states are `on_track`, `behind`, `no_target`, `no_data`. `no_data` exists
-so an account with a target but no delivery is never described as "behind" — it
-has not fallen short, it has not run.
+`cumulative` is the other load-bearing flag. `leads` and `reach` accumulate over
+a period, so their targets are **paced**: 24,000 reach is 40% delivered at 40%
+elapsed. Rate metrics (`cost_per_result`, `cost_per_lead`, `roas`) cannot be
+paced — a £2 cost per lead is not £0.80 at 40% elapsed — so they are compared
+with their target directly, and carry no `pace` block.
+
+## Goal periods and state (`app/main.py`)
+A cumulative goal is judged against **pace**, never against the full target: a
+figure under the total means nothing without knowing how much of the period is
+left. The period comes, in order: a `period_start`/`period_end` set by hand on
+`account_targets`; otherwise the ACTIVE campaigns running today; otherwise the
+most recently finished campaign, so a goal can still read met or missed. A
+campaign with no `stop_time` is open-ended and cannot be paced.
+
+`elapsed_fraction = elapsed_days / total_days` (whole days, clamped 0–1),
+`expected_to_date = target × elapsed_fraction`, `pace_ratio = actual ÷ expected`.
+The actual used is the **period's own**, not the selected 30/90/All window, so
+changing the window never changes a badge. The at-risk floor lives in one place:
+`AT_RISK_PACE`.
+
+Account states:
+| state | meaning |
+|---|---|
+| `on_track` | `pace_ratio >= 1.0`, or a rate goal meeting its target |
+| `at_risk` | `AT_RISK_PACE <= pace_ratio < 1.0` |
+| `behind` | `pace_ratio < AT_RISK_PACE`, or a rate goal missing its target |
+| `met` / `missed` | period ended, actual at or above / below target |
+| `not_started` | period begins in the future |
+| `no_end_date` | cumulative target with no period end. **Never** fall back to comparing against the full target here — that is the misleading behaviour this replaced |
+| `no_target`, `no_data` | no goal set; or a goal with no delivery — it has not fallen short, it has not run |
 
 `reach` sums daily reach over the window, which over-counts unique people across
 days. It carries a `note` saying so. Analytics' cost per 1,000 reached divides by
@@ -137,17 +164,29 @@ those clients per 1,000 people reached instead, and never calls it CPA.
 - `GET /api/board?days=N` — everything the dashboard renders, in one read.
   `days=0` means all retained history. Per account: goal metric, target, actual,
   signed deviation, state, and a trend series already expressed in the goal
-  metric's units. Also returns `portfolio_history`, which deliberately ignores
-  the window, and `portfolio.active_campaigns` — live campaign state, counted
-  from the `campaigns` table and likewise not windowed. It is None, never 0,
-  when no campaign has ever been synced.
+  metric's units. `portfolio_history` is scoped to the same window as the tiles,
+  so the whole Portfolio totals panel describes one range. `retention`
+  (`days_stored`, `first_date`, `last_date`, `starts_after_window`) reports what
+  the store holds, separately — a window reaching back further than the record
+  says so rather than silently showing a different range.
+  `portfolio.active_campaigns` is live campaign state and cannot be windowed,
+  because status is only ever current. The board stopped displaying it on
+  2026-09-18 — the row shows Spend, Accounts, CPM and On pace — but the figure
+  and its rule stay, ready to return. It is None, never 0, when no campaign has
+  ever been synced. It counts campaigns
+  `_is_delivering()` accepts — ACTIVE is not enough on its own, since a campaign
+  whose flight ended still reports ACTIVE forever unless somebody paused it.
+  `portfolio.cpm` is spend ÷ impressions × 1000 over the window (impressions,
+  not reach: they add up across days and exist whatever the objective).
+  `on_pace` / `pace_judged` / `pace_excluded` count clients meeting their pace
+  out of those whose pace can be judged at all.
 - `GET /api/metrics` — the goal metrics on offer, so the UI cannot drift from
   what the server accepts.
 - `PUT /api/targets/{account_id}` — set a client's goal metric and target.
 - `GET /api/analytics?account_id=…&days=N` — one client, read-only: totals for the
   window and for the equal-length period before it (none when `days=0`), signed
-  changes, daily CPA / cost-per-1,000-reached / CTR series, and the ad set
-  breakdown. Cost is split by goal: `has_conversion_spend` and
+  changes, daily CPA / cost-per-1,000-reached / CTR / frequency series, and the
+  ad set breakdown. Cost is split by goal: `has_conversion_spend` and
   `has_awareness_spend` say which cost stats mean anything. Omitting
   `account_id` picks the first known account.
 
@@ -173,7 +212,7 @@ frontend/src/components/
   TargetCell.jsx               set the target, in that metric's units
   VitalsTrace.jsx              per-row sparkline of the goal metric
   HistoryPanel.jsx             expanded per-account chart
-  PortfolioHistory.jsx         portfolio-wide retained history
+  PortfolioHistory.jsx         portfolio daily spend, time-scaled with gaps broken
 ```
 
 ## Scope fence

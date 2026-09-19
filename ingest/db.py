@@ -19,6 +19,7 @@ from sqlalchemy import (
     Table,
     create_engine,
     delete,
+    func,
     inspect,
     text,
 )
@@ -41,6 +42,11 @@ daily_insights = Table(
     # value for them, and a zero would be a lie rather than a gap.
     Column("reach", Integer, nullable=True),
     Column("purchase_value", Float, nullable=True),
+    # Impressions per person for that day, as Meta calculated it. Pulled rather
+    # than derived: frequency is impressions ÷ reach over the period asked for,
+    # and reach does not add up across days, so a week's frequency is not the
+    # mean of its days. Null wherever reach is null — there is nothing to divide.
+    Column("frequency", Float, nullable=True),
     # `conversions` above is the legacy sum of every action type Meta reported,
     # which counts unrelated outcomes together. `results` is the honest figure:
     # the sum of each ad set's own optimisation outcome for that day (see
@@ -61,6 +67,12 @@ account_targets = Table(
     Column("client_name", String, nullable=True),
     Column("goal_metric", String, nullable=True),
     Column("target_value", Float, nullable=True),
+    # The period a target applies to, set by hand when Meta has no campaign
+    # dates to derive it from (open-ended campaigns). Set directly in the DB or
+    # through PUT /api/targets; there is no editing UI. When present these win
+    # over the campaign dates.
+    Column("period_start", Date, nullable=True),
+    Column("period_end", Date, nullable=True),
     Column("updated_at", DateTime(timezone=True), nullable=False),
 )
 
@@ -105,6 +117,11 @@ campaigns = Table(
     # False when the ad account itself is not active, which leaves campaigns
     # reading ACTIVE while nothing can deliver.
     Column("account_active", Boolean, nullable=False),
+    # The campaign's own schedule. A goal with no period set by hand takes its
+    # period from these, which is what makes a pace judgement possible at all.
+    # stop_time is null on open-ended campaigns.
+    Column("start_time", DateTime(timezone=True), nullable=True),
+    Column("stop_time", DateTime(timezone=True), nullable=True),
     Column("updated_at", DateTime(timezone=True), nullable=False),
 )
 
@@ -115,8 +132,13 @@ _ADDED_COLUMNS = (
     ("daily_insights", "purchase_value", "DOUBLE PRECISION"),
     ("daily_insights", "results", "INTEGER"),
     ("daily_insights", "results_basis", "VARCHAR"),
+    ("daily_insights", "frequency", "DOUBLE PRECISION"),
     ("account_targets", "goal_metric", "VARCHAR"),
     ("account_targets", "target_value", "DOUBLE PRECISION"),
+    ("account_targets", "period_start", "DATE"),
+    ("account_targets", "period_end", "DATE"),
+    ("campaigns", "start_time", "TIMESTAMP WITH TIME ZONE"),
+    ("campaigns", "stop_time", "TIMESTAMP WITH TIME ZONE"),
     ("adset_daily_insights", "reach", "INTEGER"),
     ("adset_daily_insights", "optimization_goal", "VARCHAR"),
     ("adset_daily_insights", "result_action_type", "VARCHAR"),
@@ -170,6 +192,7 @@ def upsert_daily_insight(
     conversions: int,
     reach: int | None = None,
     purchase_value: float | None = None,
+    frequency: float | None = None,
 ) -> None:
     values = {
         "account_id": account_id,
@@ -180,6 +203,7 @@ def upsert_daily_insight(
         "conversions": conversions,
         "reach": reach,
         "purchase_value": purchase_value,
+        "frequency": frequency,
     }
     insert = pg_insert if engine.dialect.name == "postgresql" else sqlite_insert
     stmt = insert(daily_insights).values(**values)
@@ -192,6 +216,7 @@ def upsert_daily_insight(
             "conversions": stmt.excluded.conversions,
             "reach": stmt.excluded.reach,
             "purchase_value": stmt.excluded.purchase_value,
+            "frequency": stmt.excluded.frequency,
         },
     )
     with engine.begin() as conn:
@@ -204,12 +229,16 @@ def upsert_account_target(
     client_name: str | None,
     goal_metric: str | None,
     target_value: float | None,
+    period_start: date | None = None,
+    period_end: date | None = None,
 ) -> None:
     values = {
         "account_id": account_id,
         "client_name": client_name,
         "goal_metric": goal_metric,
         "target_value": target_value,
+        "period_start": period_start,
+        "period_end": period_end,
         "updated_at": datetime.now(timezone.utc),
     }
     insert = pg_insert if engine.dialect.name == "postgresql" else sqlite_insert
@@ -220,6 +249,14 @@ def upsert_account_target(
             "client_name": stmt.excluded.client_name,
             "goal_metric": stmt.excluded.goal_metric,
             "target_value": stmt.excluded.target_value,
+            # Left alone unless this write carries one, so saving a goal from
+            # the board cannot wipe a period set by hand.
+            "period_start": func.coalesce(
+                stmt.excluded.period_start, account_targets.c.period_start
+            ),
+            "period_end": func.coalesce(
+                stmt.excluded.period_end, account_targets.c.period_end
+            ),
             "updated_at": stmt.excluded.updated_at,
         },
     )
@@ -292,6 +329,8 @@ def upsert_campaign(
     name: str | None,
     effective_status: str | None,
     account_active: bool,
+    start_time: datetime | None = None,
+    stop_time: datetime | None = None,
 ) -> None:
     values = {
         "account_id": account_id,
@@ -299,6 +338,8 @@ def upsert_campaign(
         "name": name,
         "effective_status": effective_status,
         "account_active": account_active,
+        "start_time": start_time,
+        "stop_time": stop_time,
         "updated_at": datetime.now(timezone.utc),
     }
     insert = pg_insert if engine.dialect.name == "postgresql" else sqlite_insert
@@ -309,6 +350,8 @@ def upsert_campaign(
             "name": stmt.excluded.name,
             "effective_status": stmt.excluded.effective_status,
             "account_active": stmt.excluded.account_active,
+            "start_time": stmt.excluded.start_time,
+            "stop_time": stmt.excluded.stop_time,
             "updated_at": stmt.excluded.updated_at,
         },
     )

@@ -45,6 +45,10 @@ INSIGHT_FIELDS = [
     # and action_values carries purchase revenue, which ROAS needs.
     AdsInsights.Field.reach,
     AdsInsights.Field.action_values,
+    # Impressions per person, taken from Meta rather than worked out here: it is
+    # impressions ÷ reach for the period requested, and reach is not additive,
+    # so it cannot be rebuilt from stored daily figures afterwards.
+    AdsInsights.Field.frequency,
 ]
 
 # Ad-set level, for the Analytics breakdown. Each row names its campaign too,
@@ -160,6 +164,7 @@ def pull_account(
         conversions = total_conversions(row.get("actions"))
         reach = int(row["reach"]) if row.get("reach") is not None else None
         revenue = purchase_value(row.get("action_values"))
+        frequency = float(row["frequency"]) if row.get("frequency") is not None else None
 
         upsert_daily_insight(
             engine,
@@ -171,12 +176,14 @@ def pull_account(
             conversions=conversions,
             reach=reach,
             purchase_value=revenue,
+            frequency=frequency,
         )
         stored += 1
         print(
             f"{account_id}: {insight_date} spend=${spend} "
             f"impressions={impressions} clicks={clicks} conversions={conversions} "
             f"reach={reach if reach is not None else '-'} "
+            f"frequency={frequency if frequency is not None else '-'} "
             f"revenue={revenue if revenue is not None else '-'} (stored)"
         )
 
@@ -255,6 +262,13 @@ def pull_adsets(
     }
 
 
+def parse_meta_time(raw: str | None) -> datetime | None:
+    """Meta's campaign timestamps, e.g. 2026-09-12T08:17:20+0100."""
+    if not raw:
+        return None
+    return datetime.strptime(raw, "%Y-%m-%dT%H:%M:%S%z")
+
+
 def pull_campaigns(account_id: str, engine) -> tuple[int, int]:
     """Every campaign's current state, for the board's active count.
 
@@ -272,7 +286,14 @@ def pull_campaigns(account_id: str, engine) -> tuple[int, int]:
     seen: set[str] = set()
     active = 0
     for campaign in account.get_campaigns(
-        fields=[Campaign.Field.id, Campaign.Field.name, Campaign.Field.effective_status],
+        fields=[
+            Campaign.Field.id,
+            Campaign.Field.name,
+            Campaign.Field.effective_status,
+            # The schedule a goal's pace is judged against.
+            Campaign.Field.start_time,
+            Campaign.Field.stop_time,
+        ],
         params={"limit": 500},
     ):
         effective_status = campaign.get("effective_status")
@@ -283,6 +304,8 @@ def pull_campaigns(account_id: str, engine) -> tuple[int, int]:
             name=campaign.get("name"),
             effective_status=effective_status,
             account_active=account_active,
+            start_time=parse_meta_time(campaign.get("start_time")),
+            stop_time=parse_meta_time(campaign.get("stop_time")),
         )
         seen.add(campaign["id"])
         if account_active and effective_status == "ACTIVE":
