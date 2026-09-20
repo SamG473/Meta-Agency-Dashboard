@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { fetchAnalytics } from './api.js'
+import { API_IS_REMOTE, fetchAnalytics } from './api.js'
 import { count, gbp, longDate, percent, percentChange } from './format.js'
 import { useReportingWindow } from './reportingWindow.js'
+import LoadingNotice from './components/LoadingNotice.jsx'
 import TrendChart from './components/TrendChart.jsx'
 import WindowSelector from './components/WindowSelector.jsx'
 
@@ -196,6 +197,12 @@ export default function Analytics() {
           <div className="notice notice--alarm" role="alert">
             <h3 className="notice__title">Analytics could not reach its data</h3>
             <p className="notice__body">{error}</p>
+            {API_IS_REMOTE && (
+              <p className="notice__body">
+                The demo API sleeps on free hosting and may still be waking: reload in a
+                minute.
+              </p>
+            )}
           </div>
         )}
 
@@ -210,11 +217,7 @@ export default function Analytics() {
           </div>
         )}
 
-        {!data && loading && (
-          <section className="loading" aria-busy="true">
-            <p className="label">Reading analytics…</p>
-          </section>
-        )}
+        {!data && loading && <LoadingNotice label="Reading analytics…" />}
 
         {data && !account && (
           <div className="notice">

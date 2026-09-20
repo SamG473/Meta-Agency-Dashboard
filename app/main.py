@@ -1,6 +1,7 @@
 """FastAPI backend. Reads only from Postgres — never calls Meta directly
 (see CLAUDE.md architecture rules).
 """
+import os
 from datetime import date, datetime, timedelta, timezone
 
 from dotenv import load_dotenv
@@ -29,15 +30,42 @@ app = FastAPI(title="Meta Agency Dashboard")
 # no request can reach a real client's figures.
 engine = build_demo_engine() if DEMO_MODE else get_engine()
 
-# The dashboard is served from a separate dev server in development.
+# The dashboard is served from a separate dev server in development, and from a
+# separate host entirely once deployed. Both are named explicitly: never a
+# wildcard, which would let any page on the internet read this API.
+DEV_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+]
+
+
+def _deployed_origins():
+    """The deployed frontend's origin, from FRONTEND_ORIGIN.
+
+    Comma-separated, so a second host (a custom domain alongside the default
+    one) needs no code change. Unset — the local case — yields nothing, leaving
+    the dev origins exactly as they were. A bare hostname is accepted because
+    that is the form Render passes one service's address to another in.
+    """
+    origins = []
+    for item in os.environ.get("FRONTEND_ORIGIN", "").split(","):
+        origin = item.strip().rstrip("/")
+        if not origin:
+            continue
+        if not origin.startswith(("http://", "https://")):
+            origin = f"https://{origin}"
+        if origin not in origins:
+            origins.append(origin)
+    return origins
+
+
+ALLOWED_ORIGINS = DEV_ORIGINS + [o for o in _deployed_origins() if o not in DEV_ORIGINS]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:4173",
-        "http://127.0.0.1:4173",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -302,6 +302,14 @@ body {
   padding: clamp(1.5rem, 4vw, 2.5rem) 0;
 }
 
+/* Why the wait is long, on the deployed demo only. Quiet ink: this is an
+   explanation, not a fault — nothing here is wrong. */
+.loading__wake {
+  margin: 0.75rem 0 0;
+  max-width: 52ch;
+  color: var(--ink-soft);
+}
+
 /* Opens on the heading's ink rule. No closing rule: the retained history
    carries on beneath it inside the same panel. */
 .strip {

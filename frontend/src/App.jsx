@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fetchBoard, fetchMetrics } from './api.js'
+import { API_IS_REMOTE, fetchBoard, fetchMetrics } from './api.js'
 import { STATE_LABEL, count, gbp, metricValue } from './format.js'
 import { useReportingWindow } from './reportingWindow.js'
 import GoalCell from './components/GoalCell.jsx'
 import HistoryPanel from './components/HistoryPanel.jsx'
+import LoadingNotice from './components/LoadingNotice.jsx'
 import PortfolioHistory from './components/PortfolioHistory.jsx'
 import TargetCell from './components/TargetCell.jsx'
 import VitalsTrace from './components/VitalsTrace.jsx'
@@ -231,19 +232,23 @@ export default function App() {
           <div className="notice notice--alarm" role="alert">
             <h3 className="notice__title">The board could not reach its data</h3>
             <p className="notice__body">{error}</p>
-            <p className="notice__body">
-              The dashboard reads from Postgres, never from Meta, so this is the API or the
-              database — not your ad account. Check that <code>uvicorn app.main:app</code> is
-              running.
-            </p>
+            {API_IS_REMOTE ? (
+              <p className="notice__body">
+                The dashboard reads from its own store, never from Meta, so this is the API
+                — not an ad account. The demo API sleeps on free hosting and may still be
+                waking: reload in a minute.
+              </p>
+            ) : (
+              <p className="notice__body">
+                The dashboard reads from Postgres, never from Meta, so this is the API or the
+                database — not your ad account. Check that <code>uvicorn app.main:app</code> is
+                running.
+              </p>
+            )}
           </div>
         )}
 
-        {!board && loading && (
-          <section className="loading" aria-busy="true">
-            <p className="label">Reading the board…</p>
-          </section>
-        )}
+        {!board && loading && <LoadingNotice label="Reading the board…" />}
 
         {board && (
           <>
