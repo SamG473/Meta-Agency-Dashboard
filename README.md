@@ -2,11 +2,13 @@
 
 Every client's Meta ad account in one normalised view, each measured against its own goal.
 
+**[Live demo](https://meta-agency-dashboard-web.onrender.com)** — the API sleeps on free hosting, so the first load can take up to a minute.
+
 ![Overview page](docs/screenshot.png)
 
 Meta Ads Manager displays only one ad account at a time, which makes managing multiple clients slow and fragmented. Built for freelance Meta ads work, this dashboard consolidates all client accounts into a single view, with portfolio-wide totals and trend charts that surface underperformance early and support faster, better-informed campaign adjustments.
 
-The deployed instance runs a seeded six-client portfolio with mixed objectives.
+The deployed instance runs a seeded six-client portfolio with mixed objectives. No figure on it comes from a real ad account.
 
 ## What it does
 
