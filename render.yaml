@@ -7,10 +7,18 @@
 # reach a real client's figures even if it wanted to. The nightly ingest is not
 # deployed here at all — it runs from GitHub Actions against the real store.
 #
-# Each service is told the other's address by Render rather than by hand, which
-# is what makes the pair deployable in one click: the dashboard needs the API's
-# URL to call it, and the API needs the dashboard's origin to allow it through
-# CORS. Both arrive as bare hostnames; both sides prepend the scheme.
+# Each service needs the other's address: the dashboard calls the API, and the
+# API must allow the dashboard's origin through CORS. Both are written out in
+# full below. `fromService` with `property: host` looks like the tidier way to
+# do it and is not: it yields the internal service name — "meta-agency-
+# dashboard-api", with no domain — which does not resolve from a browser and
+# never matches an Origin header. Both env vars silently took that value on the
+# first deploy, which cost a round of debugging. Public URLs, spelled out.
+#
+# The consequence of spelling them out: renaming a service, or serving this
+# from a custom domain, means editing the two URLs here. The frontend must then
+# be rebuilt rather than restarted, because Vite bakes its value in at build
+# time.
 services:
   - type: web
     name: meta-agency-dashboard-api
@@ -27,11 +35,9 @@ services:
       # The only reason this instance is safe to make public.
       - key: DEMO_MODE
         value: true
+      # The origin CORS allows: the dashboard, and nothing else.
       - key: FRONTEND_ORIGIN
-        fromService:
-          type: web
-          name: meta-agency-dashboard-web
-          property: host
+        value: https://meta-agency-dashboard-web.onrender.com
 
   - type: web
     name: meta-agency-dashboard-web
@@ -43,10 +49,7 @@ services:
     envVars:
       # Read at build time by Vite and baked into the bundle.
       - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: meta-agency-dashboard-api
-          property: host
+        value: https://meta-agency-dashboard-api.onrender.com
     routes:
       # React Router uses real paths, so a direct link to /analytics must be
       # served the app rather than a 404.

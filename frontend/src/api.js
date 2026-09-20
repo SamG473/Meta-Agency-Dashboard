@@ -7,8 +7,9 @@
    baked in at build time, names the deployed API. */
 const RAW_API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').trim()
 
-/* Render hands one service the address of another as a bare hostname, so a
-   missing scheme is the normal case rather than a mistake. Trailing slashes go
+/* The scheme is optional in the env var: a host set as "example.com" and one
+   set as "https://example.com" both work, so a value pasted from a hosting
+   dashboard cannot silently produce an unfetchable URL. Trailing slashes go
    too, because every path below starts with one. */
 export const API_BASE = RAW_API_BASE
   ? (/^https?:\/\//i.test(RAW_API_BASE) ? RAW_API_BASE : `https://${RAW_API_BASE}`).replace(

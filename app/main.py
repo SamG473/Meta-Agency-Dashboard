@@ -46,8 +46,10 @@ def _deployed_origins():
 
     Comma-separated, so a second host (a custom domain alongside the default
     one) needs no code change. Unset — the local case — yields nothing, leaving
-    the dev origins exactly as they were. A bare hostname is accepted because
-    that is the form Render passes one service's address to another in.
+    the dev origins exactly as they were. The scheme is optional, so a value
+    pasted from a hosting dashboard without one still matches; it is assumed to
+    be https, since an origin allowed over plain http would be a downgrade
+    nobody asked for.
     """
     origins = []
     for item in os.environ.get("FRONTEND_ORIGIN", "").split(","):
