@@ -199,8 +199,8 @@ export default function Analytics() {
             <p className="notice__body">{error}</p>
             {API_IS_REMOTE && (
               <p className="notice__body">
-                The demo API sleeps on free hosting and may still be waking: reload in a
-                minute.
+                The demo server is hosted on a free tier and suspends when idle. It may
+                still be starting; please reload in a minute.
               </p>
             )}
           </div>

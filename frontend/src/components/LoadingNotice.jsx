@@ -30,8 +30,8 @@ export default function LoadingNotice({ label }) {
       <p className="label">{label}</p>
       {waking && (
         <p className="loading__wake" role="status">
-          The demo API is on free hosting, which sleeps when nobody is using it. It is
-          waking up now — a first load can take up to a minute. Later loads are instant.
+          The demo server is hosted on a free tier and suspends when idle. The first
+          request may take up to a minute.
         </p>
       )}
     </section>

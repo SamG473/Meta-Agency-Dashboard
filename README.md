@@ -2,7 +2,7 @@
 
 Every client's Meta ad account in one normalised view, each measured against its own goal.
 
-**[Live demo](https://meta-agency-dashboard-web.onrender.com)** — the API sleeps on free hosting, so the first load can take up to a minute.
+**[Live demo](https://meta-agency-dashboard-web.onrender.com)**. The demo server is hosted on a free tier and suspends when idle. The first request may take up to a minute.
 
 ![Overview page](docs/screenshot.png)
 

@@ -235,8 +235,8 @@ export default function App() {
             {API_IS_REMOTE ? (
               <p className="notice__body">
                 The dashboard reads from its own store, never from Meta, so this is the API
-                — not an ad account. The demo API sleeps on free hosting and may still be
-                waking: reload in a minute.
+                rather than an ad account. The demo server is hosted on a free tier and
+                suspends when idle. It may still be starting; please reload in a minute.
               </p>
             ) : (
               <p className="notice__body">
