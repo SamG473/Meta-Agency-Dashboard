@@ -248,6 +248,10 @@ frontend/src/components/
 - API (dev): `/opt/anaconda3/bin/python3 -m uvicorn app.main:app --reload`
 - Frontend (dev): `npm --prefix frontend run dev` — port 5173, proxies `/api` to
   port 8000
+- Tests: `/opt/anaconda3/bin/python3 -m pytest` — in-memory SQLite locally;
+  CI (`.github/workflows/tests.yml`) runs them against a Postgres container via
+  `TEST_DATABASE_URL`. `tests/conftest.py` pins dummy env vars before importing
+  the app, so a local `.env` can never point the suite at the real store.
 
 ## Verification
 - After changing ingest logic, run a manual pull and confirm rows land in

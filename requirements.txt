@@ -1,6 +1,8 @@
 facebook-business
 python-dotenv
-sqlalchemy
+# Held below 2.1, which made a plain postgresql:// URL load psycopg 3 instead
+# of psycopg2 and broke the nightly ingest from 2026-09-25.
+sqlalchemy>=2.0,<2.1
 psycopg2-binary
 fastapi
 uvicorn
