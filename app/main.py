@@ -5,9 +5,9 @@ import os
 from datetime import date, datetime, timedelta, timezone
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func, select
 
 from ingest.db import (
@@ -108,8 +108,9 @@ DEFAULT_GOAL_METRIC = "cost_per_result"
 AT_RISK_PACE = 0.85
 
 
-def _ctr(clicks: int, impressions: int) -> float:
-    return round(clicks / impressions * 100, 2) if impressions else 0.0
+def _ctr(clicks: int, impressions: int) -> float | None:
+    """None with no impressions, as Analytics does: never shown is not 0%."""
+    return round(clicks / impressions * 100, 2) if impressions else None
 
 
 class TargetIn(BaseModel):
@@ -120,6 +121,14 @@ class TargetIn(BaseModel):
     # carry no stop time. Omitted fields leave any existing period alone.
     period_start: date | None = Field(default=None)
     period_end: date | None = Field(default=None)
+
+    @model_validator(mode="after")
+    def _period_in_order(self):
+        # A reversed period sums delivery over an empty range, so a client that
+        # has delivered would read "no data".
+        if self.period_start and self.period_end and self.period_end < self.period_start:
+            raise ValueError("period_end must be on or after period_start")
+        return self
 
 
 def _metric_actual(metric: str, spend: float, results: int | None, reach: int | None,
@@ -306,6 +315,11 @@ PACE_JUDGED = PACE_HEALTHY | {"at_risk", "behind", "missed"}
 # long enough to survive a quiet weekend or a day the ingest missed.
 RECENT_DELIVERY = timedelta(days=7)
 
+# The widest window either page accepts, in days; 0 still means all history. Ten
+# years is far beyond anything stored, and an unbounded value overflowed date
+# arithmetic into a 500 instead of a clear 422.
+MAX_WINDOW_DAYS = 3650
+
 
 def _is_delivering(campaign, delivering_ids: set[str], today: date) -> bool:
     """Whether a campaign is actually running.
@@ -332,15 +346,12 @@ def _is_delivering(campaign, delivering_ids: set[str], today: date) -> bool:
 
 
 @app.get("/api/board")
-def board(days: int = 30):
+def board(days: int = Query(30, ge=0, le=MAX_WINDOW_DAYS)):
     """Everything the dashboard renders, in one read from Postgres.
 
     `days=0` widens the window to all retained history — the history Meta's
     own interface discards.
     """
-    if days < 0:
-        raise HTTPException(status_code=422, detail="days must be 0 or greater")
-
     today = date.today()
     since = None if days == 0 else today - timedelta(days=days - 1)
 
@@ -356,6 +367,9 @@ def board(days: int = 30):
                     account_targets.c.client_name,
                     account_targets.c.goal_metric,
                     account_targets.c.target_value,
+                    # Read by _goal_period: a period set by hand wins.
+                    account_targets.c.period_start,
+                    account_targets.c.period_end,
                 )
             ).all()
         }
@@ -762,14 +776,14 @@ def _account_list(known: list[str]) -> str:
 
 
 @app.get("/api/analytics")
-def analytics(account_id: str | None = None, days: int = 30):
+def analytics(
+    account_id: str | None = None,
+    days: int = Query(30, ge=0, le=MAX_WINDOW_DAYS),
+):
     """One client's analytics over a window, with the equal-length period just
     before it for comparison. Read-only. `days=0` means all retained history,
     which has no earlier period to compare against.
     """
-    if days < 0:
-        raise HTTPException(status_code=422, detail="days must be 0 or greater")
-
     today = date.today()
     since = None if days == 0 else today - timedelta(days=days - 1)
     window = {

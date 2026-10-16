@@ -44,6 +44,27 @@ python -m ingest.run
 python -m ingest.run --since 2026-07-01 --until 2026-07-31
 ```
 
+## Running the tests
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+pytest
+```
+
+Locally the tests use a throwaway in-memory SQLite database, so they need no setup and never touch the real store or the Meta API. To run them against Postgres instead, as CI does, point `TEST_DATABASE_URL` at a database whose name contains `test` (the suite refuses any other name, because it drops every table when it finishes):
+
+```bash
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dashboard_test pytest
+```
+
+| File | Covers |
+| --- | --- |
+| `tests/test_metrics.py` | Derived metrics: CTR, cost per result, ROAS, pacing, period-over-period change, including zero-denominator cases |
+| `tests/test_results.py` | Which Meta action counts as a "result" for each optimisation goal |
+| `tests/test_api.py` | The API endpoints, against a small seeded fake dataset |
+
+GitHub Actions runs the suite on every push and pull request, against a Postgres service container (`.github/workflows/tests.yml`).
+
 ## Demo mode
 
 ```bash
