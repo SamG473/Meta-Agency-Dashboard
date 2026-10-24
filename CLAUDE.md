@@ -111,6 +111,20 @@ snapshot, not a time series: it answers "what is live right now", which is what
 Campaigns Meta stops returning are deleted from this table on the next run, so a
 vanished campaign cannot go on being counted as active.
 
+**`ingest_heartbeat`** — one row per job (`ingest`), rewritten by every run so
+the database sees a write each night even with no delivery to store: Supabase's
+free tier pauses a project it sees as idle, and a paused project took the
+ingest down in October 2026.
+| column | notes |
+|---|---|
+| `job` | primary key |
+| `last_run_at` | UTC; written as soon as a run reaches the database |
+| `last_success_at` | UTC; written only when a run finishes. Behind `last_run_at` means runs are failing |
+
+**Ingest logs are public** (the repo is public, so are its Actions logs). They
+print counts only — never spend, delivery or other client figures — and account
+ids masked to their last four digits via `mask()` in `ingest/run.py`.
+
 ## Goal metrics
 Defined in `GOAL_METRICS` in `app/main.py`. Each carries a `label`, a `unit`
 (`currency` / `count` / `ratio`) and a `direction`.

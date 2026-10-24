@@ -1,4 +1,6 @@
 """API tests: the real FastAPI routes, against the seeded test database."""
+import os
+import subprocess
 import sys
 from datetime import timedelta
 
@@ -175,9 +177,22 @@ def test_metrics_lists_the_goal_registry(client):
     assert keys == {"leads", "roas", "cost_per_lead", "cost_per_result", "reach"}
 
 
-def test_api_never_loads_the_meta_sdk(client, seeded):
+def test_api_never_loads_the_meta_sdk():
     # The dashboard reads only from the database. If any route pulled in the
     # Meta SDK, it would be one step from a live API call on page load.
-    client.get("/api/board")
-    client.get("/api/analytics")
-    assert "facebook_business" not in sys.modules
+    # Checked in a fresh interpreter: the ingest tests import the SDK into
+    # this one, so sys.modules here says nothing about the app on its own.
+    script = (
+        "import sys\n"
+        "from fastapi.testclient import TestClient\n"
+        "from app.main import app\n"
+        "client = TestClient(app)\n"
+        "assert client.get('/api/board').status_code == 200\n"
+        "assert client.get('/api/analytics').status_code == 200\n"
+        "assert 'facebook_business' not in sys.modules\n"
+    )
+    # Demo mode gives the routes an in-memory database to read.
+    env = {**os.environ, "DEMO_MODE": "true", "DATABASE_URL": "sqlite://"}
+    result = subprocess.run([sys.executable, "-c", script], env=env,
+                            capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr

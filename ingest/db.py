@@ -125,6 +125,19 @@ campaigns = Table(
     Column("updated_at", DateTime(timezone=True), nullable=False),
 )
 
+# One row, rewritten by every ingest run. It exists so that each night writes
+# something even when Meta has no delivery to store: Supabase's free tier
+# pauses a project it sees as idle, and a paused project took the ingest down.
+# `last_run_at` moves whenever a run reaches the database; `last_success_at`
+# only when the run finished, so the two disagreeing means the runs are failing.
+ingest_heartbeat = Table(
+    "ingest_heartbeat",
+    metadata,
+    Column("job", String, primary_key=True),
+    Column("last_run_at", DateTime(timezone=True), nullable=False),
+    Column("last_success_at", DateTime(timezone=True), nullable=True),
+)
+
 # Columns added after the tables first shipped. `create_all` will not alter an
 # existing table, so these run as idempotent ALTERs on every init.
 _ADDED_COLUMNS = (
@@ -369,6 +382,23 @@ def prune_campaigns(engine: Engine, account_id: str, keep: set[str]) -> int:
         statement = statement.where(campaigns.c.campaign_id.not_in(keep))
     with engine.begin() as conn:
         return conn.execute(statement).rowcount
+
+
+def record_heartbeat(engine: Engine, succeeded: bool = False, job: str = "ingest") -> None:
+    """Touch the heartbeat row: the run time always, the success time only
+    when `succeeded`. One row per job, updated in place."""
+    now = datetime.now(timezone.utc)
+    values = {"job": job, "last_run_at": now}
+    if succeeded:
+        values["last_success_at"] = now
+    insert = pg_insert if engine.dialect.name == "postgresql" else sqlite_insert
+    stmt = insert(ingest_heartbeat).values(**values)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["job"],
+        set_={column: stmt.excluded[column] for column in values if column != "job"},
+    )
+    with engine.begin() as conn:
+        conn.execute(stmt)
 
 
 def set_daily_results(

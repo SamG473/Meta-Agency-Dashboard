@@ -62,6 +62,7 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dashboard_test p
 | `tests/test_metrics.py` | Derived metrics: CTR, cost per result, ROAS, pacing, period-over-period change, including zero-denominator cases |
 | `tests/test_results.py` | Which Meta action counts as a "result" for each optimisation goal |
 | `tests/test_api.py` | The API endpoints, against a small seeded fake dataset |
+| `tests/test_ingest.py` | The nightly ingest with the Meta SDK faked: a no-delivery night, a normal night, an unreachable database |
 
 GitHub Actions runs the suite on every push and pull request, against a Postgres service container (`.github/workflows/tests.yml`).
 
