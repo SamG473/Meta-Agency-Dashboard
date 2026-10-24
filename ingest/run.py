@@ -23,11 +23,13 @@ from facebook_business.adobjects.adset import AdSet
 from facebook_business.adobjects.adsinsights import AdsInsights
 from facebook_business.adobjects.campaign import Campaign
 from facebook_business.api import FacebookAdsApi
+from sqlalchemy.exc import OperationalError
 
 from ingest.db import (
     get_engine,
     init_db,
     prune_campaigns,
+    record_heartbeat,
     set_daily_results,
     upsert_adset_daily_insight,
     upsert_campaign,
@@ -76,6 +78,15 @@ PURCHASE_ACTION_TYPES = {
     "omni_purchase",
     "offsite_conversion.fb_pixel_purchase",
 }
+
+
+def mask(account_id: str) -> str:
+    """An account id as it may appear in a log: the last four digits only.
+
+    The repo is public and so are its Actions logs, which is also why nothing
+    printed here carries a client's spend or delivery figures, only counts.
+    """
+    return f"act_…{account_id[-4:]}"
 
 
 def load_account_ids() -> list[str]:
@@ -150,9 +161,9 @@ def pull_account(
         fields=INSIGHT_FIELDS,
         params=build_params(since, until),
     )
+    window = "yesterday" if since is None else f"{since}..{until}"
     if not insights:
-        window = "yesterday" if since is None else f"{since}..{until}"
-        print(f"{account_id}: no rows for {window}")
+        print(f"{mask(account_id)}: no rows for {window}")
         return 0
 
     stored = 0
@@ -179,14 +190,8 @@ def pull_account(
             frequency=frequency,
         )
         stored += 1
-        print(
-            f"{account_id}: {insight_date} spend=${spend} "
-            f"impressions={impressions} clicks={clicks} conversions={conversions} "
-            f"reach={reach if reach is not None else '-'} "
-            f"frequency={frequency if frequency is not None else '-'} "
-            f"revenue={revenue if revenue is not None else '-'} (stored)"
-        )
 
+    print(f"{mask(account_id)}: {stored} account row(s) stored for {window}")
     return stored
 
 
@@ -254,7 +259,7 @@ def pull_adsets(
             day["results"] = (day["results"] or 0) + results
 
     window = "yesterday" if since is None else f"{since}..{until}"
-    print(f"{account_id}: {stored} ad set row(s) stored for {window}")
+    print(f"{mask(account_id)}: {stored} ad set row(s) stored for {window}")
 
     return stored, {
         day: (values["results"], daily_basis(values["bases"]))
@@ -314,7 +319,7 @@ def pull_campaigns(account_id: str, engine) -> tuple[int, int]:
     removed = prune_campaigns(engine, account_id, seen)
     note = "" if account_active else f", account_status={account_status} (not active)"
     print(
-        f"{account_id}: {len(seen)} campaign(s), {active} active"
+        f"{mask(account_id)}: {len(seen)} campaign(s), {active} active"
         f"{f', {removed} removed' if removed else ''}{note}"
     )
     return len(seen), active
@@ -368,13 +373,36 @@ def main() -> None:
         access_token=access_token,
     )
 
+    account_ids = load_account_ids()
+    window = "yesterday" if since is None else f"{since}..{until}"
+
+    # init_db is the first thing to touch the database, so an unreachable one
+    # (a paused Supabase project, a wrong URL) fails here, before any Meta call.
+    # Still a failed run, but with one line saying what broke. Only the backend
+    # and host are printed: the full URL holds the password, and this repo's
+    # Actions logs are public.
     engine = get_engine()
-    init_db(engine)
+    where = f"{engine.url.get_backend_name()} at {engine.url.host or 'local file'}"
+    try:
+        init_db(engine)
+    except OperationalError as error:
+        reason = str(error.orig).strip().splitlines()[0]
+        sys.exit(
+            f"Database: could not connect to {where}: {reason}\n"
+            "If this is Supabase, check the project has not been paused."
+        )
+    print(f"Database: connected to {where}")
+    # Written before Meta is called, so even a run that fails there still
+    # counts as activity; the success time is only written at the very end.
+    record_heartbeat(engine)
+    print(f"Checking {len(account_ids)} account(s) for {window}\n")
 
     total = 0
     adset_total = 0
-    for account_id in load_account_ids():
-        pull_campaigns(account_id, engine)
+    campaign_total = 0
+    for account_id in account_ids:
+        campaign_count, _ = pull_campaigns(account_id, engine)
+        campaign_total += campaign_count
         goals = load_adset_goals(account_id)
         total += pull_account(account_id, engine, since, until)
         stored, per_day = pull_adsets(account_id, engine, goals, since, until)
@@ -384,10 +412,17 @@ def main() -> None:
         # together, so its results come from the ad sets instead.
         for insight_date, (results, basis) in sorted(per_day.items()):
             set_daily_results(engine, account_id, insight_date, results, basis)
-            print(f"{account_id}: {insight_date} results={results} ({basis})")
 
-    window = "yesterday" if since is None else f"{since}..{until}"
-    print(f"\nDone: {total} account row(s) and {adset_total} ad set row(s) stored for {window}.")
+    print(
+        f"\nDone: checked {len(account_ids)} account(s), {campaign_total} campaign(s); "
+        f"wrote {total} account row(s) and {adset_total} ad set row(s) for {window}."
+    )
+    if total == 0 and adset_total == 0:
+        # Meta returns no rows for days nothing delivered. A quiet run is a
+        # success, not an error: there was simply nothing to record.
+        print("No delivery in this window, so there was nothing to write.")
+
+    record_heartbeat(engine, succeeded=True)
 
 
 if __name__ == "__main__":
