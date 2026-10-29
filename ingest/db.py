@@ -57,7 +57,7 @@ daily_insights = Table(
 )
 
 # Per-client goals. Each account is judged against its own target and never
-# against another account's — see SPEC.md on aggregation vs comparison.
+# against another account's: the board aggregates, it never ranks clients.
 # `goal_metric` names which metric this client is measured on; the metric's
 # unit and direction live in the API's registry, not here.
 account_targets = Table(
