@@ -28,7 +28,7 @@ git clone https://github.com/SamG473/Meta-Agency-Dashboard.git
 cd Meta-Agency-Dashboard
 
 # API, on port 8000
-python -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 DEMO_MODE=true python -m uvicorn app.main:app
 
