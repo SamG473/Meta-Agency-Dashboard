@@ -104,12 +104,12 @@ def test_rate_goal_with_no_actual_is_no_data():
 
 # --- Pacing a cumulative goal: _pace and _state_from_pace ------------------
 
-TODAY = date(2026, 10, 15)
+FIXED_DATE = date(2026, 10, 15)
 
 
 def test_pace_three_days_into_a_ten_day_period():
-    pace = _pace(target=100, actual=30, start=TODAY - timedelta(days=2),
-                 end=TODAY + timedelta(days=7), today=TODAY)
+    pace = _pace(target=100, actual=30, start=FIXED_DATE - timedelta(days=2),
+                 end=FIXED_DATE + timedelta(days=7), today=FIXED_DATE)
     assert pace["total_days"] == 10
     assert pace["elapsed_days"] == 3       # today counts as elapsed
     assert pace["expected_to_date"] == 30.0
@@ -119,8 +119,8 @@ def test_pace_three_days_into_a_ten_day_period():
 
 def test_pace_before_the_period_starts_has_no_ratio():
     # Nothing is due yet, so there is nothing to divide by.
-    pace = _pace(target=100, actual=0, start=TODAY + timedelta(days=1),
-                 end=TODAY + timedelta(days=10), today=TODAY)
+    pace = _pace(target=100, actual=0, start=FIXED_DATE + timedelta(days=1),
+                 end=FIXED_DATE + timedelta(days=10), today=FIXED_DATE)
     assert pace["elapsed_days"] == 0
     assert pace["pace_ratio"] is None
     assert _state_from_pace(pace, 100, 0) == ("not_started", None)
