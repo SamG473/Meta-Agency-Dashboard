@@ -9,6 +9,7 @@ A result is the single outcome the ad set is optimising for. For awareness
 goals there is no conversion action at all: the result is people reached, and
 the cost figure is never a cost per conversion.
 """
+
 import sys
 
 # Goals whose outcome is delivery itself.

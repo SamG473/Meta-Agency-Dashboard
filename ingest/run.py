@@ -12,6 +12,7 @@ nightly job keeps working exactly as before.
 Every run pulls the same window twice: once at account level, and once broken
 down by ad set for the Analytics page's campaign / ad set breakdown.
 """
+
 import argparse
 import os
 import sys
@@ -262,8 +263,7 @@ def pull_adsets(
     print(f"{mask(account_id)}: {stored} ad set row(s) stored for {window}")
 
     return stored, {
-        day: (values["results"], daily_basis(values["bases"]))
-        for day, values in per_day.items()
+        day: (values["results"], daily_basis(values["bases"])) for day, values in per_day.items()
     }
 
 
@@ -283,9 +283,7 @@ def pull_campaigns(account_id: str, engine) -> tuple[int, int]:
     while nothing it contains can deliver.
     """
     account = AdAccount(account_id)
-    account_status = account.api_get(fields=[AdAccount.Field.account_status]).get(
-        "account_status"
-    )
+    account_status = account.api_get(fields=[AdAccount.Field.account_status]).get("account_status")
     account_active = account_status == 1  # 1 is ACTIVE; every other code is not.
 
     seen: set[str] = set()
@@ -332,8 +330,12 @@ def parse_args(argv: list[str] | None = None) -> tuple[date | None, date | None]
         type=int,
         help="Backfill the last N days, ending yesterday.",
     )
-    parser.add_argument("--since", type=date.fromisoformat, help="Backfill from this date (YYYY-MM-DD).")
-    parser.add_argument("--until", type=date.fromisoformat, help="Backfill up to this date (defaults to yesterday).")
+    parser.add_argument(
+        "--since", type=date.fromisoformat, help="Backfill from this date (YYYY-MM-DD)."
+    )
+    parser.add_argument(
+        "--until", type=date.fromisoformat, help="Backfill up to this date (defaults to yesterday)."
+    )
     args = parser.parse_args(argv)
 
     if args.days and args.since:

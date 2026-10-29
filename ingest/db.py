@@ -4,6 +4,7 @@ Defaults to a local SQLite file so early dev isn't blocked on a Supabase
 signup (CLAUDE.md allows this). Set DATABASE_URL to a Postgres URL to point
 at Supabase instead — no query changes needed either way.
 """
+
 import os
 from datetime import date, datetime, timezone
 
@@ -57,7 +58,7 @@ daily_insights = Table(
 )
 
 # Per-client goals. Each account is judged against its own target and never
-# against another account's — see SPEC.md on aggregation vs comparison.
+# against another account's: the board aggregates, it never ranks clients.
 # `goal_metric` names which metric this client is measured on; the metric's
 # unit and direction live in the API's registry, not here.
 account_targets = Table(
@@ -267,9 +268,7 @@ def upsert_account_target(
             "period_start": func.coalesce(
                 stmt.excluded.period_start, account_targets.c.period_start
             ),
-            "period_end": func.coalesce(
-                stmt.excluded.period_end, account_targets.c.period_end
-            ),
+            "period_end": func.coalesce(stmt.excluded.period_end, account_targets.c.period_end),
             "updated_at": stmt.excluded.updated_at,
         },
     )

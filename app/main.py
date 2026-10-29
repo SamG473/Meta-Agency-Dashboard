@@ -1,6 +1,7 @@
 """FastAPI backend. Reads only from Postgres — never calls Meta directly
 (see CLAUDE.md architecture rules).
 """
+
 import os
 from datetime import date, datetime, timedelta, timezone
 
@@ -10,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func, select
 
+from app.demo import DEMO_MODE, build_demo_engine
 from ingest.db import (
     account_targets,
     adset_daily_insights,
@@ -19,7 +21,6 @@ from ingest.db import (
     upsert_account_target,
 )
 from ingest.results import result_label
-from app.demo import DEMO_MODE, build_demo_engine
 
 load_dotenv()
 app = FastAPI(title="Meta Agency Dashboard")
@@ -131,8 +132,14 @@ class TargetIn(BaseModel):
         return self
 
 
-def _metric_actual(metric: str, spend: float, results: int | None, reach: int | None,
-                   revenue: float | None, results_basis: str | None) -> float | None:
+def _metric_actual(
+    metric: str,
+    spend: float,
+    results: int | None,
+    reach: int | None,
+    revenue: float | None,
+    results_basis: str | None,
+) -> float | None:
     """This client's goal metric over the window, or None when the underlying
     data was never ingested — which must stay distinct from a value of zero.
 
@@ -183,9 +190,7 @@ def _evaluate_rate(metric: str, target: float, actual: float | None):
         return "no_data", None
 
     direction = GOAL_METRICS.get(metric, {}).get("direction", "lower")
-    deviation = (
-        (actual - target) / target if direction == "lower" else (target - actual) / target
-    )
+    deviation = (actual - target) / target if direction == "lower" else (target - actual) / target
     state = "behind" if deviation > 0 else "on_track"
     return state, round(deviation, 4)
 
@@ -339,10 +344,7 @@ def _is_delivering(campaign, delivering_ids: set[str], today: date) -> bool:
         return False
     if campaign.campaign_id in delivering_ids:
         return True
-    return (
-        campaign.start_time is not None
-        and campaign.start_time.date() >= today - RECENT_DELIVERY
-    )
+    return campaign.start_time is not None and campaign.start_time.date() >= today - RECENT_DELIVERY
 
 
 @app.get("/api/board")
@@ -356,9 +358,7 @@ def board(days: int = Query(30, ge=0, le=MAX_WINDOW_DAYS)):
     since = None if days == 0 else today - timedelta(days=days - 1)
 
     with engine.connect() as conn:
-        known = set(
-            conn.execute(select(daily_insights.c.account_id).distinct()).scalars().all()
-        )
+        known = set(conn.execute(select(daily_insights.c.account_id).distinct()).scalars().all())
         target_rows = {
             row.account_id: row
             for row in conn.execute(
@@ -470,41 +470,41 @@ def board(days: int = Query(30, ge=0, le=MAX_WINDOW_DAYS)):
 
             days_since = (today - latest).days if latest else None
 
-            accounts.append({
-                "account_id": account_id,
-                "client_name": (target_row.client_name if target_row else None) or account_id,
-                "goal_metric": metric,
-                "goal_label": metric_spec["label"],
-                "goal_unit": metric_spec["unit"],
-                "goal_direction": metric_spec["direction"],
-                "goal_note": metric_spec.get("note"),
-                "target_value": target,
-                "actual_value": actual,
-                # Signed drift from this account's own goal, as a proportion.
-                # Positive always means worse, whichever way the metric runs.
-                "deviation": deviation,
-                "state": state,
-                # Null for a rate goal, or when there is no period to judge.
-                "pace": pace,
-                "spend": round(spend, 2),
-                "impressions": impressions,
-                "clicks": clicks,
-                # Each ad set's own optimisation outcome, not every action type
-                # added together. "reach" basis means these are people reached.
-                "results": results,
-                "results_basis": results_basis,
-                "reach": int(reach) if reach is not None else None,
-                "purchase_value": round(revenue, 2) if revenue is not None else None,
-                "ctr": _ctr(clicks, impressions),
-                "last_data_date": str(latest) if latest else None,
-                "days_since_data": days_since,
-                "trend": trend,
-            })
+            accounts.append(
+                {
+                    "account_id": account_id,
+                    "client_name": (target_row.client_name if target_row else None) or account_id,
+                    "goal_metric": metric,
+                    "goal_label": metric_spec["label"],
+                    "goal_unit": metric_spec["unit"],
+                    "goal_direction": metric_spec["direction"],
+                    "goal_note": metric_spec.get("note"),
+                    "target_value": target,
+                    "actual_value": actual,
+                    # Signed drift from this account's own goal, as a proportion.
+                    # Positive always means worse, whichever way the metric runs.
+                    "deviation": deviation,
+                    "state": state,
+                    # Null for a rate goal, or when there is no period to judge.
+                    "pace": pace,
+                    "spend": round(spend, 2),
+                    "impressions": impressions,
+                    "clicks": clicks,
+                    # Each ad set's own optimisation outcome, not every action type
+                    # added together. "reach" basis means these are people reached.
+                    "results": results,
+                    "results_basis": results_basis,
+                    "reach": int(reach) if reach is not None else None,
+                    "purchase_value": round(revenue, 2) if revenue is not None else None,
+                    "ctr": _ctr(clicks, impressions),
+                    "last_data_date": str(latest) if latest else None,
+                    "days_since_data": days_since,
+                    "trend": trend,
+                }
+            )
 
         portfolio_since = since
-        totals_scope = [] if portfolio_since is None else [
-            daily_insights.c.date >= portfolio_since
-        ]
+        totals_scope = [] if portfolio_since is None else [daily_insights.c.date >= portfolio_since]
         total_spend, total_results, total_impressions, total_low, total_high = conn.execute(
             select(
                 func.coalesce(func.sum(daily_insights.c.spend), 0.0),
@@ -518,9 +518,7 @@ def board(days: int = Query(30, ge=0, le=MAX_WINDOW_DAYS)):
         # Impressions, deliberately, not reach: they add up across days and every
         # campaign has them whatever it optimises for, so this figure stays valid
         # for a portfolio mixing reach, leads and conversions.
-        cpm = (
-            round(total_spend / total_impressions * 1000, 2) if total_impressions else None
-        )
+        cpm = round(total_spend / total_impressions * 1000, 2) if total_impressions else None
         latest_overall = conn.execute(select(func.max(daily_insights.c.date))).scalar()
 
         # Live campaign state, not a windowed figure. None rather than zero
@@ -604,9 +602,7 @@ def board(days: int = Query(30, ge=0, le=MAX_WINDOW_DAYS)):
             "pace_excluded": sum(1 for a in accounts if a["state"] not in PACE_JUDGED),
             "accounts_needing_attention": len(needing),
             "accounts_behind": sum(1 for a in accounts if a["state"] == "behind"),
-            "accounts_untargeted": sum(
-                1 for a in accounts if a["target_value"] is None
-            ),
+            "accounts_untargeted": sum(1 for a in accounts if a["target_value"] is None),
             "spend": round(total_spend, 2),
             "results": int(total_results) if total_results is not None else None,
             "results_basis": _basis(total_low, total_high),
@@ -822,8 +818,7 @@ def analytics(
             raise HTTPException(
                 status_code=404,
                 detail=(
-                    f"Unknown account {account_id!r}. "
-                    f"This board knows {_account_list(known)}."
+                    f"Unknown account {account_id!r}. This board knows {_account_list(known)}."
                 ),
             )
 
@@ -854,9 +849,7 @@ def analytics(
         ).all()
 
         latest = conn.execute(
-            select(func.max(daily_insights.c.date)).where(
-                daily_insights.c.account_id == account_id
-            )
+            select(func.max(daily_insights.c.date)).where(daily_insights.c.account_id == account_id)
         ).scalar()
 
         synced = bool(
@@ -870,9 +863,7 @@ def analytics(
         if since is not None:
             adset_scope.append(adset_daily_insights.c.date >= since)
         adset_rows = conn.execute(
-            select(adset_daily_insights)
-            .where(*adset_scope)
-            .order_by(adset_daily_insights.c.date)
+            select(adset_daily_insights).where(*adset_scope).order_by(adset_daily_insights.c.date)
         ).all()
 
     # Cost per day, split the same way as the period totals: only a conversion
