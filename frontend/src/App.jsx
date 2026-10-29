@@ -118,10 +118,10 @@ function WardRow({ account, index, expanded, onToggle, onSaved, windowLabel, met
         <td>
           <GoalCell account={account} metrics={metrics} onSaved={onSaved} />
         </td>
-        <td className="right">
+        <td>
           <TargetCell account={account} onSaved={onSaved} />
         </td>
-        <td className="right">
+        <td>
           <span
             className={`row__figure row__figure--actual${
               account.actual_value == null ? ' row__figure--absent' : ''
@@ -281,8 +281,8 @@ export default function App() {
                 <tr>
                   <th scope="col">Client</th>
                   <th scope="col">Goal</th>
-                  <th scope="col" className="right">Target</th>
-                  <th scope="col" className="right">Actual</th>
+                  <th scope="col">Target</th>
+                  <th scope="col">Actual</th>
                   <th scope="col">Trend</th>
                   <th scope="col">State</th>
                   <th scope="col">
