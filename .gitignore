@@ -1,22 +1,33 @@
+# Secrets: every .env variant, except the committed template.
 .env
+.env.*
 *.env
+!.env.example
+
+# Local databases
 *.db
 
-
+# Python
 __pycache__/
 *.pyc
 venv/
 .venv/
+.pytest_cache/
+.ruff_cache/
 
-
+# Editors and OS
 .DS_Store
 .vscode/
+.idea/
+
+# Logs
+*.log
 
 # Per-machine tool state and local config: never belongs in a public repo.
 *.local.json
-# Local design-tool state.
 .impeccable/
 
+# Frontend
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
