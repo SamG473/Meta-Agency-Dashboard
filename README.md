@@ -51,7 +51,6 @@ flowchart LR
 
 - **Pull and store, never live-query.** A nightly job pulls each account's insights into PostgreSQL, and the API reads only from there. Page loads never touch Meta, so they are fast however many accounts are connected, the Marketing API's rate limits stay irrelevant, and history Meta's own interface discards is kept.
 - **Read-only against Meta.** The ingest uses the `ads_read` scope and never changes a campaign. The only writes the API makes are to its own `account_targets` table, when a client's goal is set.
-- **Each client against its own goal.** Accounts are totalled together but never ranked against each other. A cumulative goal (leads, reach) is judged against pace through its period, and a rate goal (cost per result, ROAS) against its target directly.
 - **"Results" means the ad set's own objective.** Meta reports every action an ad produced; the ingest counts only the one each ad set optimises for (`ingest/results.py`), so a reach campaign is never given a cost per conversion.
 - **Quiet nights are normal.** With nothing delivering, the ingest still succeeds and writes a heartbeat row, so an idle database is never mistaken for an abandoned one. Its logs, public on GitHub, print counts only and mask account ids.
 
