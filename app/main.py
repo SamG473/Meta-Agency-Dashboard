@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func, select
 
+from app.demo import DEMO_MODE, build_demo_engine
 from ingest.db import (
     account_targets,
     adset_daily_insights,
@@ -20,7 +21,6 @@ from ingest.db import (
     upsert_account_target,
 )
 from ingest.results import result_label
-from app.demo import DEMO_MODE, build_demo_engine
 
 load_dotenv()
 app = FastAPI(title="Meta Agency Dashboard")

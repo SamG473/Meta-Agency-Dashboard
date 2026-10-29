@@ -8,10 +8,10 @@ throwaway test one from conftest.py.
 import sys
 
 import pytest
+from conftest import TODAY
 from sqlalchemy import create_engine, func, select
 
 import ingest.run as run
-from conftest import TODAY
 from ingest.db import adset_daily_insights, campaigns, daily_insights, ingest_heartbeat
 
 # Shaped like a real id, so the log masking below has digits to keep.

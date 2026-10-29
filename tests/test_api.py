@@ -6,7 +6,6 @@ import sys
 from datetime import timedelta
 
 import pytest
-
 from conftest import TODAY
 
 
