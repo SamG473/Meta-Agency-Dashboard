@@ -4,6 +4,7 @@ Nothing here reaches Meta: AdAccount and FacebookAdsApi are swapped for
 stand-ins that return whatever each test hands them, and the database is the
 throwaway test one from conftest.py.
 """
+
 import sys
 
 import pytest
@@ -19,6 +20,7 @@ ACCOUNT = "act_100200300400"
 
 class FakeAdAccount:
     """Answers the four calls the ingest makes, from class-level fixtures."""
+
     Field = run.AdAccount.Field  # the real field names; only the calls are fake
     campaigns = []
     adsets = []
@@ -78,15 +80,26 @@ def _one_day_of_delivery():
     day = str(TODAY.replace(day=1))
     FakeAdAccount.campaigns = [{"id": "c1", "name": "Test", "effective_status": "ACTIVE"}]
     FakeAdAccount.adsets = [{"id": "as1", "optimization_goal": "LINK_CLICKS"}]
-    FakeAdAccount.account_insights = [{
-        "date_start": day, "spend": "12.50", "impressions": "1000",
-        "clicks": "40", "actions": [{"action_type": "link_click", "value": "40"}],
-    }]
-    FakeAdAccount.adset_insights = [{
-        "date_start": day, "adset_id": "as1", "campaign_id": "c1",
-        "spend": "12.50", "impressions": "1000", "clicks": "40",
-        "actions": [{"action_type": "link_click", "value": "40"}],
-    }]
+    FakeAdAccount.account_insights = [
+        {
+            "date_start": day,
+            "spend": "12.50",
+            "impressions": "1000",
+            "clicks": "40",
+            "actions": [{"action_type": "link_click", "value": "40"}],
+        }
+    ]
+    FakeAdAccount.adset_insights = [
+        {
+            "date_start": day,
+            "adset_id": "as1",
+            "campaign_id": "c1",
+            "spend": "12.50",
+            "impressions": "1000",
+            "clicks": "40",
+            "actions": [{"action_type": "link_click", "value": "40"}],
+        }
+    ]
 
 
 def test_no_campaigns_and_no_delivery_exits_cleanly(ingest):
@@ -149,6 +162,7 @@ def test_unreachable_database_fails_with_one_clear_line(ingest, monkeypatch):
 # night even when there is no delivery to store (Supabase's free tier pauses
 # an idle project).
 
+
 def _heartbeat(db):
     with db.connect() as conn:
         return conn.execute(select(ingest_heartbeat)).all()
@@ -161,7 +175,7 @@ def test_heartbeat_is_one_row_updated_by_every_run(ingest):
     assert first.last_success_at is not None
 
     ingest()
-    [second] = _heartbeat(db)              # still one row, not one per run
+    [second] = _heartbeat(db)  # still one row, not one per run
     assert second.last_run_at > first.last_run_at
     assert second.last_success_at > first.last_success_at
 
@@ -171,6 +185,7 @@ def test_failed_run_records_the_attempt_but_not_a_success(ingest, db, monkeypatc
     # but must not move the "last good run" time.
     def broken(self, fields, params):
         raise RuntimeError("Meta said no")
+
     monkeypatch.setattr(FakeAdAccount, "get_campaigns", broken)
 
     with pytest.raises(RuntimeError):

@@ -9,6 +9,7 @@ imported. The app's engine is then swapped for a test engine per test.
 The test database is TEST_DATABASE_URL when set (Postgres, in CI), otherwise an
 in-memory SQLite database that vanishes when the tests finish.
 """
+
 import os
 
 os.environ["DATABASE_URL"] = "sqlite://"
@@ -79,13 +80,20 @@ def client(db):
     return TestClient(main.app)
 
 
-def add_day(engine, account_id, day, *, spend, impressions, clicks,
-            results=None, basis=None, reach=None):
+def add_day(
+    engine, account_id, day, *, spend, impressions, clicks, results=None, basis=None, reach=None
+):
     """One account-day, written the way the ingest writes it: the account row
     first, then its results summed from the ad sets."""
     upsert_daily_insight(
-        engine, account_id, day, spend, impressions, clicks,
-        conversions=0, reach=reach,
+        engine,
+        account_id,
+        day,
+        spend,
+        impressions,
+        clicks,
+        conversions=0,
+        reach=reach,
     )
     set_daily_results(engine, account_id, day, results, basis)
 
@@ -104,46 +112,98 @@ def seeded(db):
     """
     for offset in range(3):
         day = TODAY - timedelta(days=offset)
-        add_day(db, "act_test_cpr", day, spend=10.0, impressions=1000,
-                clicks=20, results=4, basis="action", reach=800)
+        add_day(
+            db,
+            "act_test_cpr",
+            day,
+            spend=10.0,
+            impressions=1000,
+            clicks=20,
+            results=4,
+            basis="action",
+            reach=800,
+        )
         upsert_adset_daily_insight(
-            db, "act_test_cpr", "adset_leads", day,
-            adset_name="Lead form", campaign_id="camp_1",
-            campaign_name="Test leads campaign", spend=10.0,
-            impressions=1000, clicks=20, conversions=0, reach=800,
+            db,
+            "act_test_cpr",
+            "adset_leads",
+            day,
+            adset_name="Lead form",
+            campaign_id="camp_1",
+            campaign_name="Test leads campaign",
+            spend=10.0,
+            impressions=1000,
+            clicks=20,
+            conversions=0,
+            reach=800,
             optimization_goal="LEAD_GENERATION",
             result_action_type="onsite_conversion.lead_grouped",
-            results=4, cost_per_result=2.5,
+            results=4,
+            cost_per_result=2.5,
         )
 
-        add_day(db, "act_test_reach", day, spend=5.0, impressions=600,
-                clicks=3, results=500, basis="reach", reach=500)
+        add_day(
+            db,
+            "act_test_reach",
+            day,
+            spend=5.0,
+            impressions=600,
+            clicks=3,
+            results=500,
+            basis="reach",
+            reach=500,
+        )
         upsert_adset_daily_insight(
-            db, "act_test_reach", "adset_reach", day,
-            adset_name="Broad reach", campaign_id="camp_2",
-            campaign_name="Test reach campaign", spend=5.0,
-            impressions=600, clicks=3, conversions=0, reach=500,
-            optimization_goal="REACH", result_action_type="reach",
-            results=500, cost_per_result=10.0,
+            db,
+            "act_test_reach",
+            "adset_reach",
+            day,
+            adset_name="Broad reach",
+            campaign_id="camp_2",
+            campaign_name="Test reach campaign",
+            spend=5.0,
+            impressions=600,
+            clicks=3,
+            conversions=0,
+            reach=500,
+            optimization_goal="REACH",
+            result_action_type="reach",
+            results=500,
+            cost_per_result=10.0,
         )
 
     previous_day = TODAY - timedelta(days=4)
-    add_day(db, "act_test_cpr", previous_day, spend=20.0, impressions=2000,
-            clicks=20, results=2, basis="action", reach=1500)
+    add_day(
+        db,
+        "act_test_cpr",
+        previous_day,
+        spend=20.0,
+        impressions=2000,
+        clicks=20,
+        results=2,
+        basis="action",
+        reach=1500,
+    )
     upsert_adset_daily_insight(
-        db, "act_test_cpr", "adset_leads", previous_day,
-        adset_name="Lead form", campaign_id="camp_1",
-        campaign_name="Test leads campaign", spend=20.0,
-        impressions=2000, clicks=20, conversions=0, reach=1500,
+        db,
+        "act_test_cpr",
+        "adset_leads",
+        previous_day,
+        adset_name="Lead form",
+        campaign_id="camp_1",
+        campaign_name="Test leads campaign",
+        spend=20.0,
+        impressions=2000,
+        clicks=20,
+        conversions=0,
+        reach=1500,
         optimization_goal="LEAD_GENERATION",
         result_action_type="onsite_conversion.lead_grouped",
-        results=2, cost_per_result=10.0,
+        results=2,
+        cost_per_result=10.0,
     )
 
-    upsert_account_target(db, "act_test_cpr", "Test Client CPR",
-                          "cost_per_result", 5.0)
-    upsert_account_target(db, "act_test_reach", "Test Client Reach",
-                          "reach", 10000.0)
-    upsert_account_target(db, "act_test_empty", "Test Client Empty",
-                          "cost_per_result", 3.0)
+    upsert_account_target(db, "act_test_cpr", "Test Client CPR", "cost_per_result", 5.0)
+    upsert_account_target(db, "act_test_reach", "Test Client Reach", "reach", 10000.0)
+    upsert_account_target(db, "act_test_empty", "Test Client Empty", "cost_per_result", 3.0)
     return db

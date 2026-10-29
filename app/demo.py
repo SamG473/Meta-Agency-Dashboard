@@ -14,6 +14,7 @@ visible.
 
 Every name here is invented. No figure comes from a real ad account.
 """
+
 import os
 import random
 from datetime import date, datetime, time, timedelta, timezone
